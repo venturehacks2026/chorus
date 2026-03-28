@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api import asd, clarification, search, sop
+from app.api import asd, clarification, contracts, search, sop
 from app.drift.detector import router as drift_router
 
 app = FastAPI(
@@ -14,6 +14,7 @@ app.include_router(sop.router)
 app.include_router(asd.router)
 app.include_router(clarification.router)
 app.include_router(search.router)
+app.include_router(contracts.router)
 app.include_router(drift_router)
 
 

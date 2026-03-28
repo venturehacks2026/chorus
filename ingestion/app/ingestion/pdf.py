@@ -73,6 +73,7 @@ def parse_pdf(file_bytes: bytes, filename: str = "") -> ParsedDocument:
     if current_section:
         sections.append(current_section)
 
+    page_count = len(doc)
     doc.close()
     raw_text = "\n".join(raw_parts)
 
@@ -80,5 +81,5 @@ def parse_pdf(file_bytes: bytes, filename: str = "") -> ParsedDocument:
         title=filename or "Untitled PDF",
         sections=sections,
         raw_text=raw_text,
-        metadata={"page_count": len(doc), "source_type": "pdf"},
+        metadata={"page_count": page_count, "source_type": "pdf"},
     )

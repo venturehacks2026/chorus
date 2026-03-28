@@ -31,7 +31,8 @@ async def upload_sop(
         source_type = "text"
 
     parsed = parse_document(
-        file_bytes=file_bytes,
+        file_bytes=file_bytes if source_type != "text" else None,
+        text_content=file_bytes.decode("utf-8") if source_type == "text" else None,
         filename=filename,
         source_type=source_type,
         title=title or filename,

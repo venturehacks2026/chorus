@@ -6,6 +6,9 @@ export type EdgeType = 'sequential' | 'true_branch' | 'false_branch' | 'error_ha
 export type ClarificationStatus = 'pending' | 'resolved' | 'dismissed';
 export type ContractType = 'must_always' | 'must_never' | 'must_escalate';
 export type ContractStatus = 'draft' | 'active' | 'suspended' | 'archived';
+export type ContractSeverity = 'critical' | 'high' | 'medium' | 'low';
+export type FindingType = 'coverage_gap' | 'consistency_conflict' | 'executability_error';
+export type FindingStatus = 'resolved' | 'unresolved' | 'needs_human_review';
 
 // SOP
 export interface SOPListItem {
@@ -73,8 +76,52 @@ export interface DerivedContract {
   description: string;
   source_text: string | null;
   scope_node_ids: string[] | null;
+  severity: ContractSeverity | null;
+  dsl_yaml: string | null;
+  on_violation: Record<string, unknown> | null;
   status: ContractStatus;
+  generation_run_id: string | null;
   created_at: string;
+  updated_at: string | null;
+}
+
+export interface ContractFinding {
+  id: string;
+  asd_id: string;
+  generation_run_id: string;
+  contract_id: string | null;
+  finding_type: FindingType;
+  severity: string;
+  description: string;
+  details: Record<string, unknown>;
+  status: FindingStatus;
+  resolution: string | null;
+  resolved_at: string | null;
+  loop_iteration: number;
+  created_at: string;
+}
+
+export interface ContractGenRun {
+  id: string;
+  asd_id: string;
+  status: string;
+  current_agent: string | null;
+  loop_count: number;
+  error: string | null;
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface ActivationGate {
+  can_activate: boolean;
+  reasons: string[];
+}
+
+export interface ContractListData {
+  contracts: DerivedContract[];
+  findings: ContractFinding[];
+  latest_run: ContractGenRun | null;
+  activation_gate: ActivationGate | null;
 }
 
 export interface ASDDetail extends ASDListItem {

@@ -51,3 +51,28 @@ class ContractStatus(str, enum.Enum):
     active = "active"
     suspended = "suspended"
     archived = "archived"
+
+
+class ContractSeverity(str, enum.Enum):
+    critical = "critical"
+    high = "high"
+    medium = "medium"
+    low = "low"
+
+
+class ViolationAction(str, enum.Enum):
+    BLOCK = "BLOCK"
+    ESCALATE = "ESCALATE"
+    LOG = "LOG"
+
+
+class FindingType(str, enum.Enum):
+    coverage_gap = "coverage_gap"
+    consistency_conflict = "consistency_conflict"
+    executability_error = "executability_error"
+
+
+class FindingStatus(str, enum.Enum):
+    resolved = "resolved"
+    unresolved = "unresolved"
+    needs_human_review = "needs_human_review"

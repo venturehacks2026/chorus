@@ -16,6 +16,16 @@ export async function proxyPost(path: string, body: unknown): Promise<Response> 
   return Response.json(data, { status: res.status });
 }
 
+export async function proxyPatch(path: string, body: unknown): Promise<Response> {
+  const res = await fetch(`${INGESTION_BASE}${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return Response.json(data, { status: res.status });
+}
+
 export async function proxyFormData(path: string, formData: FormData): Promise<Response> {
   const res = await fetch(`${INGESTION_BASE}${path}`, {
     method: 'POST',

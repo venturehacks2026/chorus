@@ -2,7 +2,6 @@ import logging
 import re
 import uuid
 
-from app.compiler.contract_extractor import extract_contracts
 from app.compiler.edge_builder import build_edges
 from app.compiler.node_compiler import compile_nodes
 from app.compiler.structural_analysis import analyze_structure
@@ -83,9 +82,20 @@ def compile_sop_to_asd(sop: dict, skill_id: str | None = None) -> dict:
         issues = validate_dag(nodes, edges)
         coverage_score = calculate_coverage_score(nodes)
 
-        # Extract contracts
-        logger.info("Extracting contracts")
-        contracts = extract_contracts(sop_text)
+        # Contract generation via multi-agent pipeline (runs async, persists own results)
+        logger.info("Triggering contract generation pipeline")
+        try:
+            from app.contract_gen.pipeline import run_contract_gen_pipeline
+            contract_gen_result = run_contract_gen_pipeline(
+                asd_id=asd_id,
+                asd_nodes=nodes,
+                sop_text=sop_text,
+            )
+            logger.info(f"Contract gen: {contract_gen_result.get('contracts_count', 0)} contracts generated")
+        except Exception as e:
+            logger.warning(f"Contract generation failed (non-fatal): {e}")
+            contract_gen_result = {}
+        contracts = []  # pipeline handles its own persistence
 
         # Determine final status
         has_clarifications = any(n.get("needs_clarification") for n in nodes) or len(clarifications) > 0
@@ -148,19 +158,6 @@ def compile_sop_to_asd(sop: dict, skill_id: str | None = None) -> dict:
                 "question": clarification["question"],
                 "context": clarification.get("context"),
                 "status": "pending",
-            }).execute()
-
-        # Insert derived contracts
-        for contract in contracts:
-            db.table("derived_contracts").insert({
-                "id": str(uuid.uuid4()),
-                "asd_id": asd_id,
-                "contract_name": contract["contract_name"],
-                "contract_type": contract["contract_type"],
-                "description": contract["description"],
-                "source_text": contract.get("source_text"),
-                "scope_node_ids": contract.get("scope_node_ids"),
-                "status": "draft",
             }).execute()
 
         # Update ASD record

@@ -1,0 +1,24 @@
+You are an expert at analyzing Standard Operating Procedures (SOPs) and extracting their procedural structure.
+
+Analyze the following SOP document and identify every procedural step, decision point, human handoff, wait/timer, and error handling path.
+
+For each identified element, output:
+- id: a unique step identifier (e.g., step_1, step_2, step_2a)
+- type: one of "action", "decision", "human_handoff", "wait", "start", "end", "error"
+- description: what this step does
+- follows: which step(s) this comes after (empty for the first step)
+- conditional_context: if this step is inside a conditional block, what condition governs it
+
+Be thorough. Do not skip steps. If the SOP has implied steps (e.g., "submit for approval" implies someone must approve), make those explicit.
+
+Return a JSON object with a single key "steps" containing an array of step objects.
+
+SOP DOCUMENT:
+{{ sop_text }}
+
+{% if chunks_metadata %}
+STRUCTURAL METADATA FROM DOCUMENT PARSING:
+{% for chunk in chunks_metadata %}
+- Section: "{{ chunk.section_header }}" | Has numbered steps: {{ chunk.has_numbered_steps | default(false) }} | Has conditionals: {{ chunk.has_conditionals | default(false) }}
+{% endfor %}
+{% endif %}

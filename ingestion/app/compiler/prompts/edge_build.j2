@@ -1,0 +1,35 @@
+You are an expert at constructing execution flow graphs from procedural nodes.
+
+Given the following compiled ASD nodes, construct all edges that define the execution flow.
+
+Edge types:
+- "sequential": normal flow from one step to the next
+- "true_branch": the path taken when a decision condition is true
+- "false_branch": the path taken when a decision condition is false
+- "error_handler": the path taken when an error occurs
+
+Rules:
+1. Every node except "end" and "error" nodes must have at least one outgoing edge
+2. Every node except "start" nodes must have at least one incoming edge
+3. Decision nodes must have exactly one true_branch and one false_branch edge
+4. The graph must be a DAG (no cycles)
+5. Add a "start" node if one doesn't exist, connecting to the first step
+6. Add an "end" node if one doesn't exist, connecting from the last step(s)
+
+Return a JSON object with:
+{
+  "edges": [
+    {
+      "from_node_id": "step_1",
+      "to_node_id": "step_2",
+      "edge_type": "sequential|true_branch|false_branch|error_handler",
+      "condition_label": "optional label" or null
+    }
+  ],
+  "added_nodes": [
+    ... any start/end nodes that needed to be added ...
+  ]
+}
+
+COMPILED NODES:
+{{ nodes_json }}

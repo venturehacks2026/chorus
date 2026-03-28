@@ -12,7 +12,7 @@ Rules:
 - Tool IDs: "tool-1", "tool-2", etc.
 - Positions: first agent at x:150, y:200 — each subsequent agent 320px to the right
 - Only use tools from the provided connector slugs
-- model default: "claude-opus-4-5"
+- model default: "claude-haiku-4-5-20251001"
 - max_tokens default: 4096
 
 Return ONLY valid JSON — no markdown, no explanation.
@@ -38,7 +38,7 @@ export async function parseNlToWorkflow(
   anthropic: Anthropic,
 ): Promise<WorkflowGraph> {
   const message = await anthropic.messages.create({
-    model: 'claude-opus-4-5',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
     messages: [

@@ -19,23 +19,42 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Already running' }, { status: 409 });
   }
 
-  // Fire-and-forget
+  // Note the time before we fire so we can find the right execution row
+  const beforeRun = new Date().toISOString();
+
+  // Fire-and-forget orchestration
   runWorkflow(body.workflow_id, {
     supabase,
     anthropic: getAnthropic(),
     connectors: getRegistry(),
   }).catch(console.error);
 
-  // Brief wait to capture execution_id
-  await new Promise((r) => setTimeout(r, 100));
+  // Poll up to 3s for the execution row to appear
+  let execId: string | null = null;
+  for (let i = 0; i < 15; i++) {
+    await new Promise(r => setTimeout(r, 200));
+    const { data: exec } = await supabase
+      .from('executions')
+      .select('id')
+      .eq('workflow_id', body.workflow_id)
+      .gte('triggered_at', beforeRun)
+      .order('triggered_at', { ascending: false })
+      .limit(1)
+      .single();
+    if (exec?.id) { execId = exec.id; break; }
+  }
 
-  const { data: exec } = await supabase
-    .from('executions')
-    .select('id')
-    .eq('workflow_id', body.workflow_id)
-    .order('triggered_at', { ascending: false })
-    .limit(1)
-    .single();
+  if (!execId) {
+    // Last attempt — grab the most recent execution regardless of time
+    const { data: exec } = await supabase
+      .from('executions')
+      .select('id')
+      .eq('workflow_id', body.workflow_id)
+      .order('triggered_at', { ascending: false })
+      .limit(1)
+      .single();
+    execId = exec?.id ?? null;
+  }
 
-  return NextResponse.json({ execution_id: exec?.id }, { status: 202 });
+  return NextResponse.json({ execution_id: execId }, { status: 202 });
 }

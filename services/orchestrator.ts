@@ -112,7 +112,7 @@ export async function runWorkflow(workflowId: string, deps: OrchestratorDeps): P
 
         while (looping) {
           const stream = anthropic.messages.stream({
-            model: (agent.model as string) ?? 'claude-opus-4-5',
+            model: (agent.model as string) ?? 'claude-haiku-4-5-20251001',
             max_tokens: (agent.max_tokens as number) ?? 4096,
             system: agent.system_prompt as string,
             tools: toolDefs.length > 0 ? toolDefs : undefined,

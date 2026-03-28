@@ -7,9 +7,9 @@ import { useWorkflowStore } from '@/stores/workflowStore';
 import type { AgentNodeData, AgentTool, Connector } from '@/lib/types';
 
 const MODELS = [
-  { value: 'claude-opus-4-5',   label: 'Claude Opus 4.5' },
-  { value: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5' },
-  { value: 'claude-haiku-4-5',  label: 'Claude Haiku 4.5' },
+  { value: 'claude-haiku-4-5-20251001',  label: 'Claude Haiku 4.5 (default)' },
+  { value: 'claude-sonnet-4-5-20251001', label: 'Claude Sonnet 4.5' },
+  { value: 'claude-opus-4-5-20251001',   label: 'Claude Opus 4.5' },
 ];
 
 const INPUT = 'w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all';
@@ -82,7 +82,7 @@ export default function AgentConfigPanel() {
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1.5">Model</label>
           <select
-            value={form.model ?? 'claude-opus-4-5'}
+            value={form.model ?? 'claude-haiku-4-5-20251001'}
             onChange={e => setForm(f => ({ ...f, model: e.target.value }))}
             className={INPUT}
           >

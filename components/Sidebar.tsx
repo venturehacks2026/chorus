@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bot, Store } from 'lucide-react';
+import { Bot, Store, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const NAV = [
-  { href: '/',            icon: Bot,   label: 'Agents' },
-  { href: '/marketplace', icon: Store, label: 'Marketplace' },
+  { href: '/',            icon: Bot,      label: 'Agents' },
+  { href: '/marketplace', icon: Store,    label: 'Marketplace' },
+  { href: '/skills',      icon: Sparkles, label: 'Skills' },
 ];
 
 export default function Sidebar() {
@@ -16,9 +17,9 @@ export default function Sidebar() {
   return (
     <aside className="w-56 shrink-0 border-r border-gray-100 flex flex-col bg-white">
       {/* Logo */}
-      <div className="px-5 h-14 flex items-center border-b border-gray-100">
-        <span className="text-[15px] font-bold tracking-tight text-gray-900">Chorus</span>
-        <span className="ml-0.5 text-violet-600 font-bold text-[15px]">.</span>
+      <div className="px-5 h-16 flex items-center justify-center border-b border-gray-100">
+        <span className="text-[22px] font-bold tracking-tight text-gray-900">Chorus</span>
+        <span className="ml-0.5 text-violet-600 font-bold text-[22px]">.</span>
       </div>
 
       {/* Nav */}

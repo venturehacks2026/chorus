@@ -16,6 +16,7 @@ interface WorkflowStore {
   workflowId: string | null;
 
   loadGraph: (workflowId: string, graph: WorkflowGraph) => void;
+  addStreamedAgent: (agent: AgentNodeData) => void;
   setEdges: (edges: Edge[]) => void;
   onNodesChange: (changes: NodeChange[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
@@ -30,6 +31,32 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   edges: [],
   selectedAgentId: null,
   workflowId: null,
+
+  addStreamedAgent: (agent) => {
+    set((state) => {
+      if (state.nodes.find(n => n.id === agent.id)) return state;
+      const node: Node = {
+        id: agent.id,
+        type: 'agent',
+        position: agent.position ?? { x: 150 + state.nodes.length * 320, y: 200 },
+        data: agent as Record<string, unknown>,
+      };
+      // Auto-connect to previous agent with smoothstep edge
+      const newEdges = [...state.edges];
+      if (state.nodes.length > 0) {
+        const prevNode = state.nodes[state.nodes.length - 1];
+        newEdges.push({
+          id: `stream-edge-${prevNode.id}-${agent.id}`,
+          source: prevNode.id,
+          target: agent.id,
+          type: 'smoothstep',
+          style: { stroke: '#7c3aed', strokeWidth: 1.5 },
+          animated: true,
+        });
+      }
+      return { nodes: [...state.nodes, node], edges: newEdges };
+    });
+  },
 
   loadGraph: (workflowId, graph) => {
     const nodes: Node[] = graph.agents.map((agent) => ({

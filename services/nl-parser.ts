@@ -6,30 +6,42 @@ const SYSTEM_PROMPT = `You are a workflow architect for Chorus — an AI agent o
 Given a natural-language task, design a WorkflowGraph. Each agent has ONE focused responsibility.
 
 TOOL SELECTION:
-- web-scraper: fetch/extract text from any URL — no API key needed
-- rss-reader: parse RSS/Atom feeds into structured items — no API key needed
-- json-api: call any public JSON REST API — no API key needed for public endpoints
-- web-search: Brave Search (needs BRAVE_API_KEY)
-- perplexity: deep research (needs PERPLEXITY_API_KEY)
-- code-executor: run JavaScript for computation, transformation, or scripting
-- data-store: persist structured JSON {"field": value} results to named silos — use for any output that should be saved
-- http: raw HTTP requests
+
+MANDATORY: Any agent that searches, researches, or gathers information MUST use perplexity or parallel-research as its primary tool.
+
+Marketplace tools (use FIRST for any research/search):
+- perplexity: deep research with cited sources — for research, monitoring, brand analysis, fact-finding
+- parallel-research: concurrent multi-query search — for broad multi-topic research
+
+Built-in tools (use alongside marketplace tools, not as replacements for search):
+- web-scraper: fetch content from a specific known URL only
+- rss-reader: parse specific RSS/Atom feed URLs
+- json-api: call specific known REST API endpoints
+- code-executor: computation, transformation, analysis — NOT for web searching
+- data-store: persist structured results (workflow_id is auto-injected, do not pass it)
+- http: raw HTTP requests to known endpoints
 - memory: ephemeral key-value store
 - file-reader: read local files
 
+"web-search" does NOT exist. Never assign it. Every research workflow MUST have perplexity or parallel-research on data-gathering agents.
+
+AGENT OUTPUT STYLE:
+- Do NOT include emojis in system_prompt text or output.
+- Use plain markdown: headings, bullets, tables. No decorative characters.
+
 Rules:
 - Use 2–5 agents | Agent IDs: "agent-1", "agent-2", etc. | Tool IDs: "tool-1", "tool-2", etc.
-- model: "claude-haiku-4-5-20251001" | max_tokens: 4096
+- model: "claude-haiku-4-5-20251001" | max_tokens: 2048
 - Only use tools from the provided connector slugs
 - Agents producing structured output MUST use data-store to save results as {"field": value} objects
-- Positions: first agent x:150 y:200, each subsequent +320px on x
+- Positions: first agent x:150 y:200, each subsequent +500px on x
 
 Return ONLY valid JSON — no markdown, no explanation.
 
 {
   "agents": [{
     "id": string, "name": string, "role": string, "system_prompt": string,
-    "model": "claude-haiku-4-5-20251001", "max_tokens": 4096,
+    "model": "claude-haiku-4-5-20251001", "max_tokens": 2048,
     "tools": [{ "id": string, "connector_id": string, "label": string, "config": {} }],
     "position": { "x": number, "y": number }
   }],
@@ -68,7 +80,7 @@ export async function parseNlToWorkflow(
   // Ensure positions
   graph.agents = graph.agents.map((a: AgentNodeData, i: number) => ({
     ...a,
-    position: a.position ?? { x: 150 + i * 320, y: 200 },
+    position: a.position ?? { x: 150 + i * 500, y: 200 },
   }));
 
   return graph;

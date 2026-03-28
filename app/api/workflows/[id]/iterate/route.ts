@@ -1,187 +1,146 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { getAnthropic } from '@/lib/anthropic';
-import { getRegistry } from '@/connectors/registry';
-import { SKILLS } from '@/lib/skills';
-import type { WorkflowGraph, AgentNodeData } from '@/lib/types';
+import type { WorkflowGraph } from '@/lib/types';
 
-const ITERATE_SYSTEM_PROMPT = `You are a workflow architect for Chorus — an AI agent orchestration platform.
+// ─── Skill definitions (server-side, no imports from client files) ────────────
 
-You are MODIFYING an existing workflow graph based on a user's instruction.
-The current graph is provided as JSON. Apply the requested changes and return the FULL updated graph.
+const SKILL_PROMPTS: Record<string, { system: string; tools?: string[] }> = {
+  brief:           { system: 'You write concise 1-page executive briefs: Situation, Key Facts, Options, Recommendation, Next Steps. Store in data-store.', tools: ['data-store'] },
+  report:          { system: 'You write full structured Markdown reports: executive summary, sections, recommendations, appendix. Store in data-store.', tools: ['data-store'] },
+  research:        { system: 'You are a research specialist. Use marketplace search connectors for deep cited research and broad multi-query sweeps. Synthesize findings with citations. Store in data-store.', tools: ['perplexity', 'parallel-research', 'data-store'] },
+  compare:         { system: 'You build scored comparison tables (1-5 per dimension) and give a clear recommendation with trade-offs. Use available search connectors to research each option. Store in data-store.', tools: ['perplexity', 'data-store'] },
+  summarize:       { system: 'You condense content into: TL;DR (2 sentences), Key Points (5-8 bullets), Notable Details, Gaps/Caveats. Use available search connectors for additional context if needed.', tools: ['perplexity', 'web-scraper'] },
+  monitor:         { system: 'You fetch URLs, extract relevant data, store results with timestamps, flag anomalies vs prior data. Store in data-store.', tools: ['web-scraper', 'json-api', 'data-store'] },
+  'news-digest':   { system: 'You aggregate news using available search connectors for broad coverage and rss-reader for feeds, group by theme, write a structured digest with headline, summary, source, date. Store in data-store.', tools: ['parallel-research', 'rss-reader', 'web-scraper', 'data-store'] },
+  swot:            { system: 'You conduct SWOT analyses: 3-5 points per quadrant with evidence, 2 critical strategic implications. Use available search connectors for researched evidence. Store in data-store.', tools: ['perplexity', 'data-store'] },
+  okrs:            { system: 'You generate 3-5 OKRs: inspiring time-bound Objective + 3 measurable Key Results each with confidence %. Store in data-store.', tools: ['data-store'] },
+  competitor:      { system: 'You build competitor profiles: overview, products, pricing, GTM, strengths/weaknesses, recent news, differentiation. Use available search connectors for competitive intel. Store in data-store.', tools: ['parallel-research', 'perplexity', 'data-store'] },
+  analyze:         { system: 'You are a data analyst: compute stats, identify patterns and anomalies, form hypotheses, suggest 3 actionable next steps. Use code-executor for large datasets.', tools: ['code-executor', 'data-store'] },
+  critique:        { system: 'You find weaknesses and risks: Strengths (2-3), Critical Issues (High/Med/Low), Logical Gaps, Assumptions, Fixes. Organized by severity.', tools: [] },
+  extract:         { system: 'You extract structured entities (people, orgs, dates, amounts, locations) from unstructured text as JSON, deduplicated. Store in data-store.', tools: ['code-executor', 'data-store'] },
+  audit:           { system: 'You audit processes against criteria: map current state, check each step (Pass/Fail/Gap), build audit table, compliance score, prioritized remediation plan. Store in data-store.', tools: ['data-store'] },
+  code:            { system: 'You write clean, production-ready code with error handling. Outline approach first, then implement. Run with code-executor to verify. Store in data-store.', tools: ['code-executor', 'data-store'] },
+  debug:           { system: 'You debug code: trace execution, identify root cause (not symptom), provide a verified fix. Run with code-executor to confirm. List other issues spotted.', tools: ['code-executor'] },
+  'data-pipeline': { system: 'You build complete data pipelines: fetch → transform → validate → store. Report records processed and quality metrics. Store in data-store.', tools: ['rss-reader', 'web-scraper', 'json-api', 'code-executor', 'data-store'] },
+  draft:           { system: 'You write polished first drafts: parse format/audience/tone, outline, write complete draft. No filler.', tools: ['data-store'] },
+  'workflow-design': { system: 'You design optimized workflows: identify steps/decisions, assign human/AI/hybrid, define inputs/outputs, flag oversight needs. Output Chorus-compatible structure.', tools: ['data-store'] },
+  'meeting-notes': { system: 'You transform raw notes: Meeting Summary, Attendees, Key Decisions, Action Items table (owner|task|due|priority), Open Questions, Next Meeting. Store in data-store.', tools: ['data-store'] },
+};
+
+const ITERATE_SYSTEM = `You are a workflow architect for Chorus. The user wants to iterate on an existing workflow graph.
+
+Given the current JSON graph and the user's instruction, return an UPDATED WorkflowGraph JSON.
 
 Rules:
-- Keep all existing agents/edges unless the user explicitly asks to remove them
-- When adding agents: use IDs like "agent-N" (next available number)
-- When the user asks to add a skill to an agent, update that agent's system_prompt and tools accordingly
-- model: "claude-haiku-4-5-20251001" | max_tokens: 4096
-- Only use tools from the provided connector slugs
-- Positions: maintain existing positions, space new agents 420px apart
+- Preserve existing agent IDs and structure unless explicitly asked to change them
+- When applying a /skill-<command> to an agent, update that agent's system_prompt to include the skill's behavior and add the skill's required tools to the agent's tools list
+- If /skill-<command>@AgentName is specified, only apply to that agent; otherwise apply to the most relevant agent
+- When adding new agents, use IDs like "agent-N" continuing from the highest existing N
+- MANDATORY: Any agent doing search, research, or data gathering MUST use perplexity or parallel-research as its primary tool. These always produce better results.
+- "web-search" does NOT exist. Replace any "web-search" references with perplexity.
+- code-executor is for computation/transformation ONLY, never as a substitute for web research.
+- data-store: do NOT pass workflow_id — it is auto-injected by the orchestrator.
+- Agent system_prompts must NOT include emojis. Output should be clean markdown: headings, bullets, tables. No decorative emojis or special characters.
+- EVERY agent system_prompt MUST include efficiency instructions: "EFFICIENCY: You have a budget of 8 tool calls max. Batch queries into single parallel-research calls (2-5 queries per call). Gather all data in 1-3 calls, then produce your final output. Keep output under 1500 words."
+- Set max_tokens to 2048 for all agents
+- ALWAYS return valid JSON with the same schema as the input graph
+- Return ONLY the JSON — no markdown, no explanation
 
-Return ONLY valid JSON — the complete updated WorkflowGraph:
-{
-  "agents": [...],
-  "edges": [...]
-}`;
+Return format: { "agents": [...], "edges": [...] }`;
 
-function fuzzyMatchAgent(agents: AgentNodeData[], query: string): AgentNodeData | null {
-  const q = query.toLowerCase().trim();
-  if (!q) return null;
+// ─── Connector availability ───────────────────────────────────────────────────
 
-  // Exact name match
-  const exact = agents.find(a => a.name.toLowerCase() === q);
-  if (exact) return exact;
+const FREE_CONNECTORS = ['web-scraper', 'rss-reader', 'json-api', 'code-executor', 'data-store', 'http', 'memory', 'file-reader'];
+const KEYED_CONNECTORS = ['perplexity', 'parallel-research'];
 
-  // Substring match
-  const sub = agents.find(a => a.name.toLowerCase().includes(q) || q.includes(a.name.toLowerCase()));
-  if (sub) return sub;
-
-  // Word overlap match: compare word sets
-  const qWords = new Set(q.split(/\s+/).filter(w => w.length > 2));
-  let bestAgent: AgentNodeData | null = null;
-  let bestOverlap = 0;
-  for (const a of agents) {
-    const nameWords = new Set(a.name.toLowerCase().split(/\s+/).filter(w => w.length > 2));
-    let overlap = 0;
-    for (const w of qWords) {
-      for (const nw of nameWords) {
-        if (nw.includes(w) || w.includes(nw)) overlap++;
-      }
-    }
-    if (overlap > bestOverlap) {
-      bestOverlap = overlap;
-      bestAgent = a;
-    }
+async function getEnabledSlugs(): Promise<string[]> {
+  try {
+    const supabase = createServerSupabase();
+    const { data } = await supabase.from('connector_secrets').select('slug').in('slug', KEYED_CONNECTORS);
+    return [...FREE_CONNECTORS, ...(data ?? []).map((r: { slug: string }) => r.slug)];
+  } catch {
+    return FREE_CONNECTORS;
   }
-  return bestOverlap > 0 ? bestAgent : null;
 }
 
+// ─── Route handler ────────────────────────────────────────────────────────────
+
 export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id: workflowId } = await params;
-  const body = await req.json() as { message: string };
-
-  if (!body.message?.trim()) {
-    return NextResponse.json({ error: 'message is required' }, { status: 400 });
-  }
-
-  const supabase = createServerSupabase();
-
-  const { data: workflow } = await supabase
-    .from('workflows')
-    .select('*')
-    .eq('id', workflowId)
-    .single();
-
-  if (!workflow) {
-    return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
-  }
-
-  const currentGraph = workflow.graph_json as WorkflowGraph;
-  const registry = getRegistry();
-  const slugs = Array.from(registry.keys());
-  const anthropic = getAnthropic();
-
-  // Parse /skill-xxx tokens from the message
-  const skillMatches = body.message.match(/\/skill-([\w-]+)/g) ?? [];
-  const matchedSkills = skillMatches
-    .map(token => {
-      const cmd = '/' + token.replace('/skill-', '');
-      return SKILLS.find(s => s.command === cmd);
-    })
-    .filter(Boolean) as typeof SKILLS[number][];
-
-  // Build skill context for the LLM
-  let skillContext = '';
-  if (matchedSkills.length > 0) {
-    skillContext = '\n\n--- SKILL CONTEXT ---\nThe user referenced these skills. Apply them to the specified agent:\n' +
-      matchedSkills.map(s =>
-        `• ${s.command} (${s.name}): ${s.description}\n  System prompt addition: "${s.systemPrompt}"\n  Suggested tools: ${s.tools?.join(', ') ?? 'none'}`
-      ).join('\n');
-  }
-
-  // Strip /skill tokens for the user message to the LLM
-  const cleanMessage = body.message.replace(/\/skill-([\w-]+)/g, '').trim();
-
-  const userMessage = `Current workflow graph:\n${JSON.stringify(currentGraph, null, 2)}\n\nAvailable connectors: ${slugs.join(', ')}\n\nUser instruction: ${cleanMessage}${skillContext}`;
-
-  let graph: WorkflowGraph;
-
   try {
-    const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
-      system: ITERATE_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userMessage }],
-    });
+    const { id } = await params;
+    const body = await req.json() as { message: string; graph: WorkflowGraph };
 
-    const text = msg.content[0];
-    if (text.type !== 'text') throw new Error('Expected text');
-    const cleaned = text.text.replace(/^```(?:json)?\s*/m, '').replace(/\s*```$/m, '').trim();
-    graph = JSON.parse(cleaned) as WorkflowGraph;
-    if (!Array.isArray(graph.agents)) throw new Error('Invalid graph: missing agents array');
-  } catch (err) {
-    return NextResponse.json({ error: `LLM failed: ${String(err)}` }, { status: 422 });
-  }
-
-  // Server-side skill enforcement: after LLM returns, forcefully apply skills to target agents
-  if (matchedSkills.length > 0) {
-    // Try to identify the target agent name from the user message
-    // Look for patterns like "add /skill-X to <agent name>" or "give <agent name> /skill-X"
-    const agentNamePatterns = [
-      /(?:add|give|assign|apply)\s+\/skill-[\w-]+\s+to\s+(.+?)(?:\.|$)/i,
-      /(?:add|give|assign|apply)\s+(.+?)\s+\/skill-[\w-]+/i,
-      /\/skill-[\w-]+\s+(?:to|for|on)\s+(.+?)(?:\.|$)/i,
-    ];
-
-    let targetAgentName: string | null = null;
-    for (const pattern of agentNamePatterns) {
-      const m = body.message.match(pattern);
-      if (m?.[1]) {
-        targetAgentName = m[1].replace(/\/skill-[\w-]+/g, '').trim();
-        break;
-      }
+    if (!body.message) {
+      return NextResponse.json({ error: 'message required' }, { status: 400 });
     }
 
-    if (targetAgentName) {
-      const targetAgent = fuzzyMatchAgent(graph.agents, targetAgentName);
-      if (targetAgent) {
-        for (const skill of matchedSkills) {
-          // Merge system prompt
-          if (skill.systemPrompt && !targetAgent.system_prompt.includes(skill.systemPrompt)) {
-            targetAgent.system_prompt = `${targetAgent.system_prompt}\n\n--- ${skill.name} Skill ---\n${skill.systemPrompt}`;
-          }
+    const enabledSlugs = await getEnabledSlugs();
 
-          // Merge tools
-          if (skill.tools?.length) {
-            const existingToolIds = new Set(targetAgent.tools.map(t => t.connector_id));
-            for (const toolSlug of skill.tools) {
-              if (!existingToolIds.has(toolSlug) && registry.has(toolSlug)) {
-                targetAgent.tools.push({
-                  id: `tool-skill-${Date.now()}-${toolSlug}`,
-                  connector_id: toolSlug,
-                  label: toolSlug,
-                  config: {},
-                });
-                existingToolIds.add(toolSlug);
-              }
-            }
-          }
+    // Parse /skill-<command> tokens from the message
+    const skillTokenRegex = /\/skill-([\w-]+)(?:@([\w\s-]+))?/g;
+    let match: RegExpExecArray | null;
+    const skills: Array<{ command: string; agentTarget: string | null }> = [];
+    while ((match = skillTokenRegex.exec(body.message)) !== null) {
+      skills.push({ command: match[1], agentTarget: match[2] ?? null });
+    }
+
+    // Build skill context block
+    let skillContext = '';
+    if (skills.length > 0) {
+      skillContext = '\n\n--- SKILLS TO APPLY ---\n';
+      for (const { command, agentTarget } of skills) {
+        const skill = SKILL_PROMPTS[command];
+        if (!skill) continue;
+        const tools = (skill.tools ?? []).filter(t => enabledSlugs.includes(t));
+        skillContext += `\nSkill: /skill-${command}${agentTarget ? ` → apply to agent named "${agentTarget}"` : ' → apply to most relevant agent'}\n`;
+        skillContext += `Behavior: ${skill.system}\n`;
+        if (tools.length > 0) {
+          skillContext += `Required tools: ${tools.join(', ')}\n`;
         }
       }
     }
+
+    const userMessage = [
+      `Available connectors: ${enabledSlugs.join(', ')}`,
+      `\nCurrent graph:\n${JSON.stringify(body.graph, null, 2)}`,
+      skillContext,
+      `\nUser instruction: ${body.message.replace(/\/skill-[\w-]+(?:@[\w\s-]+)?/g, '').trim() || '(Apply the skills above)'}`,
+    ].join('');
+
+    const anthropic = getAnthropic();
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 4096,
+      system: ITERATE_SYSTEM,
+      messages: [{ role: 'user', content: userMessage }],
+    });
+
+    const raw = response.content
+      .filter(b => b.type === 'text')
+      .map(b => (b as { type: 'text'; text: string }).text)
+      .join('');
+
+    // Strip markdown fences
+    const cleaned = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```$/m, '').trim();
+
+    let graph: WorkflowGraph;
+    try {
+      graph = JSON.parse(cleaned) as WorkflowGraph;
+    } catch {
+      return NextResponse.json({ error: 'Failed to parse updated graph', raw }, { status: 500 });
+    }
+
+    // Persist updated graph
+    const supabase = createServerSupabase();
+    await supabase.from('workflows').update({ graph_json: graph }).eq('id', id);
+
+    return NextResponse.json({ graph });
+  } catch (err) {
+    console.error('[iterate]', err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
   }
-
-  // Ensure positions
-  graph.agents = graph.agents.map((a, i) => ({
-    ...a,
-    position: a.position ?? { x: 150 + i * 420, y: 200 },
-  }));
-
-  // Persist
-  await supabase.from('workflows').update({ graph_json: graph }).eq('id', workflowId);
-
-  return NextResponse.json({ graph, nl_prompt: workflow.nl_prompt });
 }

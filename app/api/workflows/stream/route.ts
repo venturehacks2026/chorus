@@ -11,23 +11,41 @@ Given a natural-language task, design a WorkflowGraph of focused agents that col
 ━━━ DESIGN RULES ━━━
 - Use 2–5 agents; each agent has ONE clear, scoped responsibility
 - Agent IDs: "agent-1", "agent-2", etc. | Edge IDs: "edge-1", "edge-2", etc. | Tool IDs: "tool-1", "tool-2", etc.
-- model: "claude-haiku-4-5-20251001" | max_tokens: 4096
+- model: "claude-haiku-4-5-20251001" | max_tokens: 2048
 - ONLY use tools from the provided connector slugs — never invent tool names
 
 ━━━ TOOL SELECTION GUIDE ━━━
-- web-scraper: fetch and extract clean text/metadata from any URL — USE THIS for reading web pages, articles, product pages
-- rss-reader: read RSS/Atom feeds for news, blog posts, updates — USE THIS for monitoring content sources
-- json-api: call any public JSON REST API (GitHub, weather, finance, HN, etc.) — USE THIS for structured data from APIs
-- web-search: search the web via Brave API (requires BRAVE_API_KEY in env)
-- perplexity: deep research queries (requires PERPLEXITY_API_KEY in env)
-- code-executor: run JavaScript to compute, transform, analyze, or call APIs — USE FOR data processing, calculations, generating scripts
-- data-store: persist structured results so they survive and are visible in the Data tab — ALWAYS insert as {"field": value} objects
-- http: raw HTTP requests when exact control is needed
+
+MANDATORY RULE: Any agent that needs to search, research, gather intelligence, or find information MUST use perplexity or parallel-research as its PRIMARY tool. These marketplace tools produce cited, high-quality results. Never use code-executor or web-scraper as a substitute for actual web research.
+
+Marketplace tools (use these FIRST for any research/search task):
+- perplexity: deep research with cited sources — USE THIS for any research, current events, brand monitoring, competitor analysis, fact-finding
+- parallel-research: run 2-5 concurrent searches and merge results — USE THIS for broad multi-query research, monitoring multiple topics
+
+Built-in tools (use alongside marketplace tools, not as replacements):
+- web-scraper: fetch content from a SPECIFIC known URL — only use when you already have a URL to scrape
+- rss-reader: read RSS/Atom feeds — use for monitoring specific RSS feed URLs
+- json-api: call specific REST APIs (GitHub, weather, finance) — use when you know the exact API endpoint
+- code-executor: run JavaScript for computation, transformation, analysis — NOT for web searching
+- data-store: persist structured results — do NOT pass workflow_id (it is auto-injected). Just pass action, silo_name, and data.
+- http: raw HTTP requests to specific endpoints
 - memory: ephemeral key-value within a single execution
-- file-reader: read files from the local filesystem
+- file-reader: read local files
+
+━━━ CRITICAL: TOOL ASSIGNMENT ━━━
+- "web-search" does NOT exist. Never use it.
+- Every workflow that involves research, monitoring, or data gathering MUST include at least one agent with perplexity or parallel-research in its tools array.
+- Agents doing research should have perplexity (for deep single-topic research) or parallel-research (for multi-query breadth) as their FIRST tool.
+- Data processing and storage agents should use code-executor and data-store.
+
+━━━ AGENT OUTPUT STYLE ━━━
+- Agents must produce clean, professional output: plain text and markdown only.
+- Do NOT use emojis in agent system_prompt or in output.
+- Use markdown headings, bullet points, and tables for structure — not emojis or decorative characters.
 
 ━━━ DATA STORAGE RULE ━━━
 Any agent that produces structured output (research results, scraped data, metrics, generated content) MUST include data-store in its tools and insert results as structured JSON objects with meaningful field names. Example: {"title": "...", "url": "...", "summary": "...", "score": 8.5}
+When calling data-store, only pass: action, silo_name, table_name, and data. The workflow_id is injected automatically — never pass it yourself.
 
 ━━━ PARALLEL AGENTS ━━━
 - Agents with the same parallel_group letter run concurrently (e.g. multiple scrapers)
@@ -40,11 +58,13 @@ Each agent's system_prompt must be specific and actionable:
 - Reference the company context or policy if mentioned in the task
 - For data-storing agents: "Store results to silo '[descriptive_name]', table '[table_name]' using data-store with fields: {field1, field2, ...}"
 - For final/summary agents: "Verify that all required data was collected and summarize findings. Your output will be evaluated against contracts."
+- EVERY agent system_prompt MUST include: "If any required context is missing, make reasonable assumptions and state them. Never ask for user input — you are running autonomously."
+- EVERY agent system_prompt MUST include: "EFFICIENCY: You have a budget of 8 tool calls max. Batch queries into single parallel-research calls (2-5 queries per call). Gather all data in 1-3 calls, then produce your final output. Keep output under 1500 words."
 
 ━━━ POSITIONS ━━━
-- Sequential: x increases by 420, y = 200
-- Parallel group: same x, y spaced by 180 (e.g. 120, 300)
-- Leave 420px gap before and after parallel groups
+- Sequential: x increases by 500, y = 200
+- Parallel group: same x, y spaced by 220 (e.g. 100, 320)
+- Leave 500px gap before and after parallel groups
 
 Return ONLY valid JSON — no markdown, no explanation.
 
@@ -55,7 +75,7 @@ Return ONLY valid JSON — no markdown, no explanation.
     "role": string,
     "system_prompt": string,
     "model": "claude-haiku-4-5-20251001",
-    "max_tokens": 4096,
+    "max_tokens": 2048,
     "parallel_group": string | null,
     "tools": [{ "id": string, "connector_id": string, "label": string, "config": {} }],
     "position": { "x": number, "y": number }
@@ -151,7 +171,7 @@ export async function POST(req: Request) {
               try {
                 const agent = JSON.parse(rawJson.slice(start, end + 1)) as AgentNodeData;
                 if (!agent.position) {
-                  agent.position = { x: 150 + emittedAgentIds.size * 420, y: 200 };
+                  agent.position = { x: 150 + emittedAgentIds.size * 500, y: 200 };
                 }
                 emittedAgentIds.add(agentId);
                 send({ type: 'agent', agent });
@@ -200,7 +220,7 @@ export async function POST(req: Request) {
         // Ensure positions with 420px spacing
         graph.agents = graph.agents.map((a, i) => ({
           ...a,
-          position: a.position ?? { x: 150 + i * 420, y: 200 },
+          position: a.position ?? { x: 150 + i * 500, y: 200 },
         }));
 
         // 4. Persist final graph

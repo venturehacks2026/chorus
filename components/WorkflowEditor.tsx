@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
@@ -24,8 +24,12 @@ export default function WorkflowEditor() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
   const loadGraph = useWorkflowStore((s) => s.loadGraph);
+  const loadCanvasJson = useWorkflowStore((s) => s.loadCanvasJson);
   const setEdges = useWorkflowStore((s) => s.setEdges);
   const toWorkflowGraph = useWorkflowStore((s) => s.toWorkflowGraph);
+  const getCanvasJson = useWorkflowStore((s) => s.getCanvasJson);
+  const nodes = useWorkflowStore((s) => s.nodes);
+  const edges = useWorkflowStore((s) => s.edges);
   const workflowId = useWorkflowStore((s) => s.workflowId);
   const executionId = useExecutionStore((s) => s.executionId);
   const executionStatus = useExecutionStore((s) => s.executionStatus);
@@ -37,6 +41,8 @@ export default function WorkflowEditor() {
   const [running, setRunning] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const streamDoneRef = useRef(false);
+  const hasInitiallyLoaded = useRef(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['workflows', id],
@@ -44,10 +50,22 @@ export default function WorkflowEditor() {
     enabled: !!id,
   });
 
+  // Reset execution state when navigating to a different workflow
+  const resetExecution = useExecutionStore((s) => s.reset);
+  useEffect(() => {
+    if (!id) return;
+    const execWfId = useExecutionStore.getState().executionWorkflowId;
+    if (execWfId !== id) {
+      resetExecution();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
   // If the workflow was just created (graph is empty), poll for streaming completion
   useEffect(() => {
     if (!data?.workflow) return;
     const graph = data.workflow.graph_json;
+    const canvas = data.workflow.canvas_json;
     const isEmpty = !graph?.agents?.length;
 
     if (isEmpty && !streamDoneRef.current) {
@@ -59,19 +77,55 @@ export default function WorkflowEditor() {
           clearInterval(interval);
           streamDoneRef.current = true;
           setIsStreaming(false);
-          loadGraph(d.workflow.id, d.workflow.graph_json);
+          if (d.workflow.canvas_json?.nodes?.length) {
+            loadCanvasJson(d.workflow.id, d.workflow.canvas_json);
+          } else {
+            loadGraph(d.workflow.id, d.workflow.graph_json, d.workflow.nl_prompt);
+          }
           setEdges(
             useWorkflowStore.getState().edges.map(e => ({ ...e, animated: false }))
           );
+          hasInitiallyLoaded.current = true;
           refetch();
         }
       }, 800);
       return () => clearInterval(interval);
     } else if (!isEmpty && data.workflow.id !== workflowId) {
-      loadGraph(data.workflow.id, data.workflow.graph_json);
+      if (canvas?.nodes?.length) {
+        loadCanvasJson(data.workflow.id, canvas);
+      } else {
+        loadGraph(data.workflow.id, data.workflow.graph_json, data.workflow.nl_prompt);
+      }
+      hasInitiallyLoaded.current = true;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.workflow?.id, data?.workflow?.graph_json?.agents?.length]);
+
+  // Debounced auto-save canvas state to Supabase
+  const saveCanvas = useCallback(() => {
+    if (!id || !hasInitiallyLoaded.current) return;
+    const canvas = getCanvasJson();
+    if (!canvas.nodes.length) return;
+    fetch(`/api/workflows/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ canvas_json: canvas }),
+    }).catch(() => {});
+  }, [id, getCanvasJson]);
+
+  useEffect(() => {
+    if (!hasInitiallyLoaded.current || isStreaming) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(saveCanvas, 1000);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [nodes, edges, saveCanvas, isStreaming]);
+
+  // Save canvas on tab close / navigation
+  useEffect(() => {
+    const handleUnload = () => saveCanvas();
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [saveCanvas]);
 
   // On mount: rehydrate execution state from DB if applicable
   useEffect(() => {
@@ -116,11 +170,20 @@ export default function WorkflowEditor() {
     return () => { supabase.removeChannel(ch); };
   }, [executionId]);
 
+  const updateOutputNode = useWorkflowStore((s) => s.updateOutputNode);
+
   useEffect(() => {
     if (executionStatus === 'running' || executionStatus === 'completed' || executionStatus === 'failed') {
       setPanel('execution');
     }
-  }, [executionStatus]);
+    if (executionStatus === 'running') {
+      updateOutputNode('running');
+    } else if (executionStatus === 'completed') {
+      updateOutputNode('completed');
+    } else if (executionStatus === 'failed') {
+      updateOutputNode('pending');
+    }
+  }, [executionStatus, updateOutputNode]);
 
   async function handleSave() {
     if (!id) return;
@@ -128,7 +191,10 @@ export default function WorkflowEditor() {
     await fetch(`/api/workflows/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ graph_json: toWorkflowGraph() }),
+      body: JSON.stringify({
+        graph_json: toWorkflowGraph(),
+        canvas_json: getCanvasJson(),
+      }),
     });
     setSaving(false);
   }
@@ -248,7 +314,7 @@ export default function WorkflowEditor() {
                 </div>
               </div>
             )}
-            {!isStreaming && !isExecRunning && id && <ChatToolbar workflowId={id} />}
+            {!isStreaming && id && <ChatToolbar workflowId={id} />}
           </div>
         </Panel>
 

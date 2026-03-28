@@ -29,7 +29,7 @@ const SKILLS: Skill[] = [
     description: 'Thoroughly research a topic across multiple sources, synthesize findings, and produce a structured report with citations.',
     systemPrompt: 'You are a research specialist. When given a topic:\n1. Identify key dimensions to explore (history, current state, key players, trends, risks)\n2. Search multiple sources using web-scraper and rss-reader\n3. Synthesize into a structured report with sections and citations\n4. Flag conflicting info or areas of uncertainty\nAlways cite sources. Never hallucinate facts. Store findings in data-store under silo "research" table "reports".',
     example: '/research latest developments in AI reasoning models',
-    tools: ['web-scraper', 'rss-reader', 'web-search', 'data-store'],
+    tools: ['web-scraper', 'rss-reader', 'perplexity', 'parallel-research', 'data-store'],
   },
   {
     command: '/monitor',

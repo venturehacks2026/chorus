@@ -77,8 +77,7 @@ async function insertStep(
 
 // Env-var fallback map (connector slug → env var names)
 const SECRET_ENV_MAP: Record<string, string[]> = {
-  'web-search':        ['BRAVE_API_KEY'],
-  'parallel-research': ['BRAVE_API_KEY'],
+  'parallel-research': ['PARALLEL_API_KEY'],
   'perplexity':        ['PERPLEXITY_API_KEY'],
 };
 
@@ -94,7 +93,6 @@ function getSecretsFromEnv(connectorSlug: string): Record<string, string> {
 
 async function getSecrets(connectorSlug: string, supabase: SupabaseClient): Promise<Record<string, string>> {
   try {
-    // Check DB first — keys saved via Marketplace UI
     const { data } = await supabase
       .from('connector_secrets')
       .select('secret_value')
@@ -102,7 +100,6 @@ async function getSecrets(connectorSlug: string, supabase: SupabaseClient): Prom
       .single();
 
     if (data?.secret_value) {
-      // Map to the expected lowercase key name(s) for this connector
       const envKeys = SECRET_ENV_MAP[connectorSlug] ?? [];
       const result: Record<string, string> = {};
       for (const key of envKeys) {
@@ -165,15 +162,24 @@ async function runAgent(
 
   if (!agentExec) return { output: '', failed: true };
 
+  const DEPRECATED_REMAP: Record<string, string> = { 'web-search': 'perplexity' };
+
   const toolDefs: Anthropic.Tool[] = [];
+  const resolvedToolIds = new Set<string>();
   for (const t of agent.tools) {
-    const connector = connectors.get(t.connector_id);
-    if (connector) toolDefs.push(connector.toAnthropicTool());
+    const slug = DEPRECATED_REMAP[t.connector_id] ?? t.connector_id;
+    if (resolvedToolIds.has(slug)) continue;
+    const connector = connectors.get(slug);
+    if (connector) {
+      toolDefs.push(connector.toAnthropicTool());
+      resolvedToolIds.add(slug);
+    }
   }
 
   // Inject knowledge base context into agent system prompt
   const kbContext = await loadKnowledgeContext(workflowId, supabase);
-  const systemPrompt = `${agent.system_prompt as string}${kbContext}`;
+  const outputStyle = '\n\nIMPORTANT OUTPUT RULES:\n- Do NOT use emojis anywhere in your output.\n- Write clean, professional prose using markdown: headings, bullet points, numbered lists, and tables.\n- No decorative characters, no emoji headers, no emoji bullets.\n- Be concise and data-driven. Avoid filler.\n- NEVER ask the user for clarification or additional input. You are running autonomously. If context is missing, make reasonable assumptions and proceed. State your assumptions briefly at the top of your output.\n- When using data-store: only pass action, silo_name, table_name, and data. Do NOT pass workflow_id — it is injected automatically.\n\nSPEED & EFFICIENCY RULES:\n- You have a STRICT budget of 8 tool calls maximum. Plan your tool usage upfront.\n- For research: batch multiple queries into a SINGLE parallel-research call using its queries array (2-5 queries per call). Do NOT make separate calls for each query.\n- Gather all data in 1-3 tool calls, then analyze and produce your final output WITHOUT further tool calls.\n- Prefer fewer, broader searches over many narrow ones.\n- Keep your final output under 1500 words.';
+  const systemPrompt = `${agent.system_prompt as string}${kbContext}${outputStyle}`;
 
   const userContent = context
     ? `Previous context:\n${context}\n\nProceed with your task.`
@@ -185,11 +191,13 @@ async function runAgent(
   try {
     let messages: Anthropic.MessageParam[] = [{ role: 'user', content: userContent }];
     let looping = true;
+    const MAX_TOOL_ITERATIONS = 8;
+    let toolIter = 0;
 
     while (looping) {
       const stream = anthropic.messages.stream({
         model: (agent.model as string) ?? 'claude-haiku-4-5-20251001',
-        max_tokens: (agent.max_tokens as number) ?? 4096,
+        max_tokens: (agent.max_tokens as number) ?? 2048,
         system: systemPrompt,
         tools: toolDefs.length > 0 ? toolDefs : undefined,
         messages,
@@ -208,26 +216,29 @@ async function runAgent(
 
       const toolUses = final.content.filter(b => b.type === 'tool_use') as Anthropic.ToolUseBlock[];
 
-      if (final.stop_reason === 'end_turn' || toolUses.length === 0) {
+      if (final.stop_reason === 'end_turn' || toolUses.length === 0 || toolIter >= MAX_TOOL_ITERATIONS) {
         looping = false;
       } else {
+        toolIter++;
         const toolResults: Anthropic.ToolResultBlockParam[] = [];
         for (const tu of toolUses) {
-          const connector = connectors.get(tu.name);
+          const resolvedName = DEPRECATED_REMAP[tu.name] ?? tu.name;
+          const connector = connectors.get(resolvedName);
           await insertStep(supabase, agentExec.id, 'tool_call', {
-            tool_name: tu.name, tool_use_id: tu.id, input: tu.input,
+            tool_name: resolvedName, tool_use_id: tu.id, input: tu.input,
           });
 
           let output = '';
           let toolError: string | undefined;
           if (connector) {
-            const cfg = (agent.tools as AgentNodeData['tools']).find(t => t.connector_id === tu.name);
-            // Inject workflow_id into data-store config so it can scope its silo
-            const extraConfig = tu.name === 'data-store' ? { workflow_id: workflowId } : {};
+            const cfg = (agent.tools as AgentNodeData['tools']).find(t =>
+              t.connector_id === tu.name || t.connector_id === resolvedName
+            );
+            const extraConfig = resolvedName === 'data-store' ? { workflow_id: workflowId } : {};
             try {
               const r = await connector.call({
                 config: { ...(cfg?.config ?? {}), ...extraConfig },
-                secrets: await getSecrets(tu.name, supabase),
+                secrets: await getSecrets(resolvedName, supabase),
                 input: tu.input,
               });
               output = r.content;
@@ -236,7 +247,7 @@ async function runAgent(
               output = `Error: ${toolError}`;
             }
           } else {
-            output = `Error: connector "${tu.name}" not found`;
+            output = `Error: connector "${resolvedName}" not found`;
             toolError = output;
           }
 

@@ -11,56 +11,14 @@ import {
 import type { AgentNodeData, WorkflowGraph } from '@/lib/types';
 
 const EDGE_STYLE = { stroke: '#7c3aed', strokeWidth: 1.5 };
-const SHIELD_SPACING = 200;
+const AGENT_SPACING = 500;
+const INPUT_X = -300;
+const AGENT_START_X = 150;
+const ROW_Y = 200;
 
-function midpoint(a: { x: number; y: number }, b: { x: number; y: number }) {
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-}
-
-function injectShieldNodes(nodes: Node[], edges: Edge[]): { nodes: Node[]; edges: Edge[] } {
-  const nodeMap = new Map(nodes.map(n => [n.id, n]));
-  const outNodes: Node[] = [...nodes];
-  const outEdges: Edge[] = [];
-
-  for (const edge of edges) {
-    const src = nodeMap.get(edge.source);
-    const tgt = nodeMap.get(edge.target);
-    const bothAgents = src?.type === 'agent' && tgt?.type === 'agent';
-
-    if (!bothAgents) {
-      outEdges.push(edge);
-      continue;
-    }
-
-    const shieldId = `shield-${edge.source}-${edge.target}`;
-    const pos = midpoint(src!.position, tgt!.position);
-
-    outNodes.push({
-      id: shieldId,
-      type: 'contract-shield',
-      position: { x: pos.x - 32, y: pos.y - 28 },
-      data: { sourceAgentId: edge.source, targetAgentId: edge.target, contractCount: 0 },
-    });
-
-    outEdges.push({
-      id: `${edge.id}__to-shield`,
-      source: edge.source,
-      target: shieldId,
-      type: 'smoothstep',
-      style: EDGE_STYLE,
-      animated: edge.animated,
-    });
-    outEdges.push({
-      id: `${edge.id}__from-shield`,
-      source: shieldId,
-      target: edge.target,
-      type: 'smoothstep',
-      style: EDGE_STYLE,
-      animated: edge.animated,
-    });
-  }
-
-  return { nodes: outNodes, edges: outEdges };
+export interface CanvasJson {
+  nodes: Node[];
+  edges: Edge[];
 }
 
 interface WorkflowStore {
@@ -69,9 +27,12 @@ interface WorkflowStore {
   selectedAgentId: string | null;
   workflowId: string | null;
 
-  loadGraph: (workflowId: string, graph: WorkflowGraph) => void;
+  loadGraph: (workflowId: string, graph: WorkflowGraph, nlPrompt?: string) => void;
+  loadCanvasJson: (workflowId: string, canvas: CanvasJson) => void;
   addStreamedAgent: (agent: AgentNodeData) => void;
-  initStreamingInput: (nlPrompt: string) => void;
+  addOutputNode: () => void;
+  updateOutputNode: (status: 'pending' | 'running' | 'completed', preview?: string) => void;
+  initStreamingInput: (nlPrompt: string, sopTitle?: string, sopSnippet?: string) => void;
   setEdges: (edges: Edge[]) => void;
   onNodesChange: (changes: NodeChange[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
@@ -79,6 +40,7 @@ interface WorkflowStore {
   updateAgentData: (id: string, patch: Partial<AgentNodeData>) => void;
   getSelectedAgent: () => AgentNodeData | null;
   toWorkflowGraph: () => WorkflowGraph;
+  getCanvasJson: () => CanvasJson;
 }
 
 export const useWorkflowStore = create<WorkflowStore>()(
@@ -97,7 +59,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
       const agentNode: Node = {
         id: agent.id,
         type: 'agent',
-        position: agent.position ?? { x: 150 + agentIdx * (SHIELD_SPACING + 220), y: 200 },
+        position: agent.position ?? { x: AGENT_START_X + agentIdx * AGENT_SPACING, y: ROW_Y },
         data: agent as Record<string, unknown>,
       };
 
@@ -107,74 +69,157 @@ export const useWorkflowStore = create<WorkflowStore>()(
       const agentNodes = state.nodes.filter(n => n.type === 'agent');
       const sourceId = agentNodes.length > 0
         ? agentNodes[agentNodes.length - 1].id
-        : state.nodes.find(n => n.id === 'kb-input')?.id;
+        : state.nodes.find(n => n.id === 'sop-input')?.id;
 
       if (sourceId) {
-        const sourceNode = state.nodes.find(n => n.id === sourceId);
-        const isSourceAgent = sourceNode?.type === 'agent';
-
-        if (isSourceAgent) {
-          const shieldId = `shield-${sourceId}-${agent.id}`;
-          const shieldX = (sourceNode!.position.x + agentNode.position.x) / 2 - 32;
-          const shieldY = (sourceNode!.position.y + agentNode.position.y) / 2 - 28;
-
-          newNodes.push({
-            id: shieldId,
-            type: 'contract-shield',
-            position: { x: shieldX, y: shieldY },
-            data: { sourceAgentId: sourceId, targetAgentId: agent.id, contractCount: 0 },
-          });
-
-          newEdges.push(
-            { id: `stream-${sourceId}-${shieldId}`, source: sourceId, target: shieldId, type: 'smoothstep', style: EDGE_STYLE, animated: true },
-            { id: `stream-${shieldId}-${agent.id}`, source: shieldId, target: agent.id, type: 'smoothstep', style: EDGE_STYLE, animated: true },
-          );
-        } else {
-          newEdges.push({
-            id: `stream-edge-${sourceId}-${agent.id}`,
-            source: sourceId,
-            target: agent.id,
-            type: 'smoothstep',
-            style: EDGE_STYLE,
-            animated: true,
-          });
-        }
+        newEdges.push({
+          id: `stream-edge-${sourceId}-${agent.id}`,
+          source: sourceId,
+          target: agent.id,
+          type: 'smoothstep',
+          style: EDGE_STYLE,
+          animated: true,
+        });
       }
 
       return { nodes: newNodes, edges: newEdges };
     });
   },
 
-  initStreamingInput: (nlPrompt) => {
+  addOutputNode: () => {
+    set((state) => {
+      if (state.nodes.find(n => n.id === 'workflow-output')) return state;
+
+      const agentNodes = state.nodes.filter(n => n.type === 'agent');
+      const lastAgent = agentNodes[agentNodes.length - 1];
+      const outputX = lastAgent
+        ? lastAgent.position.x + AGENT_SPACING
+        : AGENT_START_X + AGENT_SPACING;
+
+      const outputNode: Node = {
+        id: 'workflow-output',
+        type: 'workflow-output',
+        position: { x: outputX, y: ROW_Y },
+        data: { label: 'Output', status: 'pending' } as Record<string, unknown>,
+      };
+
+      const newEdges = [...state.edges];
+      if (lastAgent) {
+        newEdges.push({
+          id: `edge-${lastAgent.id}-output`,
+          source: lastAgent.id,
+          target: 'workflow-output',
+          type: 'smoothstep',
+          style: EDGE_STYLE,
+          animated: false,
+        });
+      }
+
+      return { nodes: [...state.nodes, outputNode], edges: newEdges };
+    });
+  },
+
+  updateOutputNode: (status, preview) => {
+    set((state) => ({
+      nodes: state.nodes.map(n =>
+        n.id === 'workflow-output'
+          ? { ...n, data: { ...n.data, status, outputPreview: preview ?? n.data.outputPreview } as Record<string, unknown> }
+          : n,
+      ),
+    }));
+  },
+
+  initStreamingInput: (nlPrompt, sopTitle, sopSnippet) => {
     set({
       nodes: [{
-        id: 'kb-input',
-        type: 'input',
-        position: { x: -260, y: 200 },
-        data: { label: nlPrompt.slice(0, 80), nlPrompt } as Record<string, unknown>,
+        id: 'sop-input',
+        type: 'sop-input',
+        position: { x: INPUT_X, y: ROW_Y },
+        data: { label: nlPrompt.slice(0, 80), nlPrompt, sopTitle, sopSnippet } as Record<string, unknown>,
       }],
       edges: [],
     });
   },
 
-  loadGraph: (workflowId, graph) => {
-    const rawNodes: Node[] = graph.agents.map((agent) => ({
-      id: agent.id,
-      type: 'agent',
-      position: agent.position ?? { x: 0, y: 0 },
-      data: agent as Record<string, unknown>,
-    }));
+  loadCanvasJson: (workflowId, canvas) => {
+    set({
+      nodes: canvas.nodes ?? [],
+      edges: canvas.edges ?? [],
+      workflowId,
+      selectedAgentId: null,
+    });
+  },
 
-    const rawEdges: Edge[] = graph.edges.map((e) => ({
-      id: e.id,
-      source: e.source_agent_id,
-      target: e.target_agent_id,
-      label: e.label,
-      type: 'smoothstep',
-      style: EDGE_STYLE,
-    }));
+  loadGraph: (workflowId, graph, nlPrompt) => {
+    const nodes: Node[] = [];
+    const edges: Edge[] = [];
 
-    const { nodes, edges } = injectShieldNodes(rawNodes, rawEdges);
+    // Input node
+    const prompt = nlPrompt ?? graph.agents[0]?.system_prompt ?? '';
+    nodes.push({
+      id: 'sop-input',
+      type: 'sop-input',
+      position: { x: INPUT_X, y: ROW_Y },
+      data: { label: prompt.slice(0, 80), nlPrompt: prompt } as Record<string, unknown>,
+    });
+
+    // Agent nodes
+    for (const agent of graph.agents) {
+      nodes.push({
+        id: agent.id,
+        type: 'agent',
+        position: agent.position ?? { x: 0, y: 0 },
+        data: agent as Record<string, unknown>,
+      });
+    }
+
+    // Agent-to-agent edges from graph definition
+    for (const e of graph.edges) {
+      edges.push({
+        id: e.id,
+        source: e.source_agent_id,
+        target: e.target_agent_id,
+        label: e.label,
+        type: 'smoothstep',
+        style: EDGE_STYLE,
+      });
+    }
+
+    // Edge from input to first agent (by position or first in array)
+    if (graph.agents.length > 0) {
+      const sorted = [...graph.agents].sort((a, b) => (a.position?.x ?? 0) - (b.position?.x ?? 0));
+      edges.push({
+        id: 'edge-input-first',
+        source: 'sop-input',
+        target: sorted[0].id,
+        type: 'smoothstep',
+        style: EDGE_STYLE,
+      });
+
+      // Output node
+      const lastAgent = sorted[sorted.length - 1];
+      const outputX = (lastAgent.position?.x ?? 0) + AGENT_SPACING;
+      nodes.push({
+        id: 'workflow-output',
+        type: 'workflow-output',
+        position: { x: outputX, y: ROW_Y },
+        data: { label: 'Output', status: 'pending' } as Record<string, unknown>,
+      });
+
+      // Find agents with no outgoing edges (terminal agents)
+      const hasOutgoing = new Set(graph.edges.map(e => e.source_agent_id));
+      const terminalAgents = graph.agents.filter(a => !hasOutgoing.has(a.id));
+      for (const ta of terminalAgents) {
+        edges.push({
+          id: `edge-${ta.id}-output`,
+          source: ta.id,
+          target: 'workflow-output',
+          type: 'smoothstep',
+          style: EDGE_STYLE,
+        });
+      }
+    }
+
     set({ nodes, edges, workflowId, selectedAgentId: null });
   },
 
@@ -204,40 +249,23 @@ export const useWorkflowStore = create<WorkflowStore>()(
   toWorkflowGraph: (): WorkflowGraph => {
     const { nodes, edges } = get();
     const agentNodes = nodes.filter(n => n.type === 'agent');
-    const shieldNodes = nodes.filter(n => n.type === 'contract-shield');
-
-    const resolvedEdges: { id: string; source: string; target: string; label?: string }[] = [];
-
-    for (const shield of shieldNodes) {
-      const data = shield.data as { sourceAgentId: string; targetAgentId: string };
-      resolvedEdges.push({
-        id: `edge-${data.sourceAgentId}-${data.targetAgentId}`,
-        source: data.sourceAgentId,
-        target: data.targetAgentId,
-      });
-    }
-
-    const shieldIds = new Set(shieldNodes.map(n => n.id));
-    for (const e of edges) {
-      if (shieldIds.has(e.source) || shieldIds.has(e.target)) continue;
-      if (resolvedEdges.some(r => r.source === e.source && r.target === e.target)) continue;
-      resolvedEdges.push({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        label: typeof e.label === 'string' ? e.label : undefined,
-      });
-    }
 
     return {
       agents: agentNodes.map((n) => ({ ...(n.data as unknown as AgentNodeData), position: n.position })),
-      edges: resolvedEdges.map(e => ({
-        id: e.id,
-        source_agent_id: e.source,
-        target_agent_id: e.target,
-        label: e.label,
-      })),
+      edges: edges
+        .filter(e => agentNodes.some(n => n.id === e.source) && agentNodes.some(n => n.id === e.target))
+        .map(e => ({
+          id: e.id,
+          source_agent_id: e.source,
+          target_agent_id: e.target,
+          label: typeof e.label === 'string' ? e.label : undefined,
+        })),
     };
+  },
+
+  getCanvasJson: (): CanvasJson => {
+    const { nodes, edges } = get();
+    return { nodes, edges };
   },
   }),
   {

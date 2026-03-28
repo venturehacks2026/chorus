@@ -1,198 +1,315 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Loader2, Sparkles, ChevronRight, X } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { ArrowUp, Loader2, X, Sparkles, ChevronDown } from 'lucide-react';
 import { useWorkflowStore } from '@/stores/workflowStore';
-import { SKILLS, type Skill, SKILL_CATEGORIES } from '@/lib/skills';
 import { cn } from '@/lib/cn';
 
-const SKILL_TOKEN_RE = /\/skill(-[\w-]*)?$/;
+// ─── Skill definitions ────────────────────────────────────────────────────────
 
-const CATEGORY_COLOR: Record<string, string> = {
-  Research: 'text-blue-600 bg-blue-50',
-  Writing: 'text-violet-600 bg-violet-50',
-  Analysis: 'text-amber-600 bg-amber-50',
-  Code: 'text-emerald-600 bg-emerald-50',
+interface SkillOption {
+  command: string;   // e.g. "brief"
+  name: string;
+  description: string;
+  category: string;
+}
+
+const SKILLS: SkillOption[] = [
+  { command: 'brief',          name: 'Executive Brief',    description: 'Concise 1-page executive brief',             category: 'Documents' },
+  { command: 'report',         name: 'Report Generator',   description: 'Full structured markdown report',            category: 'Documents' },
+  { command: 'research',       name: 'Deep Research',      description: 'Multi-source research with citations via marketplace connectors', category: 'Research' },
+  { command: 'compare',        name: 'Compare & Contrast', description: 'Scored comparison + recommendation using marketplace search',    category: 'Research' },
+  { command: 'summarize',      name: 'Summarize',          description: 'Structured briefing from any content',       category: 'Research' },
+  { command: 'monitor',        name: 'Web Monitor',        description: 'Track URL changes / pricing / data',         category: 'Research' },
+  { command: 'news-digest',    name: 'News Digest',        description: 'Broad search + RSS feed aggregation',        category: 'Research' },
+  { command: 'swot',           name: 'SWOT Analysis',      description: 'Evidence-backed SWOT via marketplace research', category: 'Strategy' },
+  { command: 'okrs',           name: 'OKR Generator',      description: 'Well-formed OKRs from a strategic goal',     category: 'Strategy' },
+  { command: 'competitor',     name: 'Competitor Profile', description: 'Competitive intel via marketplace connectors', category: 'Strategy' },
+  { command: 'analyze',        name: 'Data Analyst',       description: 'Find patterns + surface actionable insights',category: 'Analysis' },
+  { command: 'critique',       name: 'Critical Reviewer',  description: 'Weaknesses, risks, blind spots',             category: 'Analysis' },
+  { command: 'extract',        name: 'Entity Extractor',   description: 'Pull structured data from unstructured text',category: 'Analysis' },
+  { command: 'audit',          name: 'Process Auditor',    description: 'Audit against criteria or policy',           category: 'Analysis' },
+  { command: 'code',           name: 'Code Generator',     description: 'Clean, production-ready code',               category: 'Code' },
+  { command: 'debug',          name: 'Debugger',           description: 'Root cause + verified fix',                  category: 'Code' },
+  { command: 'data-pipeline',  name: 'Data Pipeline',      description: 'End-to-end fetch → transform → store',       category: 'Code' },
+  { command: 'draft',          name: 'Draft Writer',       description: 'Polished first drafts of any content',       category: 'Comms' },
+  { command: 'workflow-design',name: 'Workflow Designer',  description: 'Optimized process → Chorus agent graph',     category: 'Operations' },
+  { command: 'meeting-notes',  name: 'Meeting Notes',      description: 'Raw notes → structured action items',        category: 'Operations' },
+];
+
+const CAT_COLOR: Record<string, string> = {
+  Research:   'bg-blue-100 text-blue-700',
+  Documents:  'bg-violet-100 text-violet-700',
+  Strategy:   'bg-indigo-100 text-indigo-700',
+  Analysis:   'bg-amber-100 text-amber-700',
+  Code:       'bg-teal-100 text-teal-700',
+  Comms:      'bg-pink-100 text-pink-700',
+  Operations: 'bg-orange-100 text-orange-700',
 };
 
-export default function ChatToolbar({ workflowId }: { workflowId: string }) {
-  const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(false);
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface SelectedSkill {
+  command: string;
+  name: string;
+  category: string;
+  agentName: string;  // which agent to apply to ('any' = LLM decides)
+}
+
+interface Props {
+  workflowId: string;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function ChatToolbar({ workflowId }: Props) {
+  const [input, setInput] = useState('');
+  const [selectedSkills, setSelectedSkills] = useState<SelectedSkill[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSkills, setSelectedSkills] = useState<Skill[]>([]);
-  const loadGraph = useWorkflowStore((s) => s.loadGraph);
+  const [showSkillPicker, setShowSkillPicker] = useState(false);
+  const [skillSearch, setSkillSearch] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-  const [dropdownIdx, setDropdownIdx] = useState(0);
+  const pickerRef = useRef<HTMLDivElement>(null);
 
-  const match = message.match(SKILL_TOKEN_RE);
-  const skillQuery = match !== null
-    ? (match[1] ? match[1].slice(1) : '')
-    : null;
+  const nodes = useWorkflowStore((s) => s.nodes);
+  const loadGraph = useWorkflowStore((s) => s.loadGraph);
 
-  const suggestions: Skill[] = skillQuery !== null
-    ? (skillQuery === ''
-      ? SKILLS.filter(s => !selectedSkills.some(sel => sel.command === s.command))
-      : SKILLS.filter(s => {
-          if (selectedSkills.some(sel => sel.command === s.command)) return false;
-          const cmd = s.command.slice(1);
-          return cmd.includes(skillQuery) || s.name.toLowerCase().includes(skillQuery.toLowerCase());
-        }))
-    : [];
+  // Close picker on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowSkillPicker(false);
+      }
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
-  useEffect(() => { setDropdownIdx(0); }, [skillQuery]);
+  // Detect "/" in input to open skill picker
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInput(val);
+    if (val.endsWith('/')) {
+      setShowSkillPicker(true);
+      setSkillSearch('');
+    } else if (val.includes('/')) {
+      const afterSlash = val.slice(val.lastIndexOf('/') + 1);
+      setSkillSearch(afterSlash);
+      setShowSkillPicker(true);
+    } else {
+      setShowSkillPicker(false);
+    }
+  }, []);
 
-  function applySkill(skill: Skill) {
-    if (selectedSkills.some(s => s.command === skill.command)) return;
-    setSelectedSkills(prev => [...prev, skill]);
-    setMessage(msg => msg.replace(SKILL_TOKEN_RE, '').trimEnd() + (msg.replace(SKILL_TOKEN_RE, '').trimEnd() ? ' ' : ''));
+  const agentNames = nodes
+    .filter(n => n.type === 'agent')
+    .map(n => (n.data as { name?: string }).name ?? n.id);
+
+  const filteredSkills = SKILLS.filter(s =>
+    !skillSearch ||
+    s.command.includes(skillSearch.toLowerCase()) ||
+    s.name.toLowerCase().includes(skillSearch.toLowerCase()) ||
+    s.category.toLowerCase().includes(skillSearch.toLowerCase())
+  );
+
+  function selectSkill(skill: SkillOption) {
+    setInput(prev => prev.replace(/\/\S*$/, '').trimEnd());
+    setSelectedSkills(prev => {
+      if (prev.find(s => s.command === skill.command)) return prev;
+      return [...prev, { command: skill.command, name: skill.name, category: skill.category, agentName: 'any' }];
+    });
+    setShowSkillPicker(false);
     inputRef.current?.focus();
   }
 
   function removeSkill(command: string) {
     setSelectedSkills(prev => prev.filter(s => s.command !== command));
-    inputRef.current?.focus();
   }
 
-  const handleSubmit = useCallback(async () => {
-    if (!message.trim() && selectedSkills.length === 0) return;
-    if (loading) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const skillPrefix = selectedSkills.map(s => `/skill-${s.command.slice(1)}`).join(' ');
-      const fullMessage = skillPrefix
-        ? `${skillPrefix} ${message.trim()}`
-        : message.trim();
+  const handleSend = useCallback(async () => {
+    const trimmed = input.trim();
+    if ((!trimmed && selectedSkills.length === 0) || isLoading) return;
 
+    setIsLoading(true);
+    setError(null);
+
+    const skillTokens = selectedSkills
+      .map(s => s.agentName !== 'any' ? `/skill-${s.command}@${s.agentName}` : `/skill-${s.command}`)
+      .join(' ');
+
+    const message = [skillTokens, trimmed].filter(Boolean).join(' ');
+
+    try {
       const res = await fetch(`/api/workflows/${workflowId}/iterate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: fullMessage }),
+        body: JSON.stringify({ message, graph: useWorkflowStore.getState().toWorkflowGraph() }),
       });
+
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Request failed' }));
-        throw new Error(err.error || `HTTP ${res.status}`);
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error ?? `HTTP ${res.status}`);
       }
-      const data = await res.json();
+
+      const data = await res.json() as { graph: unknown };
       if (data.graph) {
-        loadGraph(workflowId, data.graph);
+        loadGraph(workflowId, data.graph as Parameters<typeof loadGraph>[1]);
       }
-      setMessage('');
+      setInput('');
       setSelectedSkills([]);
     } catch (err) {
-      setError(String((err as Error).message));
+      setError(String(err));
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }, [message, selectedSkills, loading, workflowId, loadGraph]);
+  }, [input, selectedSkills, isLoading, workflowId, loadGraph]);
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (suggestions.length > 0) {
-      if (e.key === 'ArrowDown') { e.preventDefault(); setDropdownIdx(i => Math.min(i + 1, suggestions.length - 1)); return; }
-      if (e.key === 'ArrowUp') { e.preventDefault(); setDropdownIdx(i => Math.max(i - 1, 0)); return; }
-      if (e.key === 'Tab' || e.key === 'Enter') { e.preventDefault(); applySkill(suggestions[dropdownIdx]); return; }
-      if (e.key === 'Escape') { setMessage(msg => msg.replace(SKILL_TOKEN_RE, '')); return; }
-    }
-    if (e.key === 'Enter' && !e.shiftKey && suggestions.length === 0) {
+  function handleKey(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      if (showSkillPicker && filteredSkills.length > 0) {
+        selectSkill(filteredSkills[0]);
+      } else {
+        handleSend();
+      }
     }
+    if (e.key === 'Escape') setShowSkillPicker(false);
   }
 
   return (
-    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[520px] max-w-[calc(100%-3rem)] z-30">
-      {error && (
-        <div className="mb-2 px-3 py-2 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600">
-          {error}
-        </div>
-      )}
+    <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 w-full max-w-2xl px-4 pointer-events-none">
+      <div className="pointer-events-auto">
 
-      {/* Skill autocomplete dropdown */}
-      {suggestions.length > 0 && (
-        <div className="mb-1.5 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-64 overflow-y-auto">
-          <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/60">
-            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Skills</span>
-          </div>
-          {suggestions.map((skill, i) => (
-            <button
-              key={skill.command}
-              onMouseDown={(e) => { e.preventDefault(); applySkill(skill); }}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 text-left transition-colors',
-                i === dropdownIdx ? 'bg-violet-50' : 'hover:bg-gray-50',
-              )}
-            >
-              <code className={cn(
-                'text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-md shrink-0',
-                CATEGORY_COLOR[skill.category] ?? 'text-gray-600 bg-gray-50',
-              )}>
-                {skill.command}
-              </code>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-gray-900 truncate">{skill.name}</p>
-                <p className="text-[11px] text-gray-400 truncate">{skill.description}</p>
-              </div>
-              <ChevronRight className="w-3 h-3 text-gray-300 shrink-0" />
+        {/* Error */}
+        {error && (
+          <div className="mb-2 px-3 py-2 bg-red-50 border border-red-100 rounded-lg flex items-center gap-2">
+            <span className="text-xs text-red-600 flex-1">{error}</span>
+            <button onClick={() => setError(null)}>
+              <X className="w-3.5 h-3.5 text-red-400" />
             </button>
-          ))}
-        </div>
-      )}
+          </div>
+        )}
 
-      {/* Skill chips */}
-      {selectedSkills.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-1.5 px-1">
-          {selectedSkills.map(skill => (
-            <div
-              key={skill.command}
+        {/* Skill picker dropdown */}
+        {showSkillPicker && (
+          <div
+            ref={pickerRef}
+            className="mb-2 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden max-h-64 overflow-y-auto"
+          >
+            <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5 text-violet-500" />
+              <span className="text-xs font-semibold text-gray-600">Choose a skill</span>
+              <span className="text-[10px] text-gray-400 ml-auto">↵ to select · Esc to close</span>
+            </div>
+            {filteredSkills.length === 0 ? (
+              <div className="px-4 py-3 text-xs text-gray-400">No matching skills</div>
+            ) : (
+              filteredSkills.map(s => (
+                <button
+                  key={s.command}
+                  onClick={() => selectSkill(s)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-violet-50 transition-colors text-left group"
+                >
+                  <code className={cn('text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0', CAT_COLOR[s.category] ?? 'bg-gray-100 text-gray-600')}>
+                    /{s.command}
+                  </code>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-gray-800 group-hover:text-violet-700">{s.name}</p>
+                    <p className="text-[11px] text-gray-400 truncate">{s.description}</p>
+                  </div>
+                  <span className="text-[10px] text-gray-300 shrink-0 ml-auto">{s.category}</span>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Main bar */}
+        <div className="bg-white/95 backdrop-blur-sm border border-gray-200 shadow-xl rounded-2xl overflow-hidden">
+          {/* Selected skill chips */}
+          {selectedSkills.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 px-3 pt-2.5 pb-0">
+              {selectedSkills.map(s => (
+                <div
+                  key={s.command}
+                  className={cn('flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold', CAT_COLOR[s.category] ?? 'bg-gray-100 text-gray-600')}
+                >
+                  <code>/{s.command}</code>
+                  {/* Agent selector */}
+                  {agentNames.length > 0 && (
+                    <div className="relative group/select">
+                      <button
+                        className="flex items-center gap-0.5 opacity-60 hover:opacity-100 transition-opacity ml-0.5"
+                        title="Apply to specific agent"
+                      >
+                        <span className="text-[10px]">{s.agentName === 'any' ? 'any' : s.agentName}</span>
+                        <ChevronDown className="w-2.5 h-2.5" />
+                      </button>
+                      <div className="absolute bottom-full mb-1 left-0 hidden group-hover/select:block bg-white border border-gray-200 rounded-lg shadow-lg z-30 min-w-[120px]">
+                        <button
+                          onClick={() => setSelectedSkills(prev => prev.map(p => p.command === s.command ? { ...p, agentName: 'any' } : p))}
+                          className="block w-full text-left px-3 py-1.5 text-xs hover:bg-violet-50 text-gray-700"
+                        >
+                          any agent
+                        </button>
+                        {agentNames.map(a => (
+                          <button
+                            key={a}
+                            onClick={() => setSelectedSkills(prev => prev.map(p => p.command === s.command ? { ...p, agentName: a } : p))}
+                            className="block w-full text-left px-3 py-1.5 text-xs hover:bg-violet-50 text-gray-700 truncate"
+                          >
+                            {a}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <button onClick={() => removeSkill(s.command)} className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity">
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 px-3 py-2.5">
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={handleInputChange}
+              onKeyDown={handleKey}
+              placeholder={selectedSkills.length > 0 ? 'Add instructions or just send…' : 'Iterate on the workflow… or type / to add a skill'}
+              disabled={isLoading}
+              className="flex-1 text-sm bg-transparent focus:outline-none text-gray-900 placeholder:text-gray-400 disabled:opacity-50"
+            />
+            <button
+              onClick={() => { setShowSkillPicker(p => !p); setSkillSearch(''); }}
               className={cn(
-                'inline-flex items-center gap-1.5 pl-2 pr-1 py-0.5 rounded-lg text-xs font-medium border transition-colors',
-                CATEGORY_COLOR[skill.category] ?? 'text-gray-600 bg-gray-50',
-                'border-current/20',
+                'shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all',
+                showSkillPicker ? 'bg-violet-100 text-violet-600' : 'text-gray-400 hover:text-violet-600 hover:bg-violet-50',
+              )}
+              title="Browse skills"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={handleSend}
+              disabled={(!input.trim() && selectedSkills.length === 0) || isLoading}
+              className={cn(
+                'shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all',
+                (input.trim() || selectedSkills.length > 0) && !isLoading
+                  ? 'bg-violet-600 hover:bg-violet-700 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-300 cursor-not-allowed',
               )}
             >
-              <code className="text-[10px] font-mono font-bold">{skill.command}</code>
-              <span className="text-[10px] opacity-70 truncate max-w-[120px]">{skill.name}</span>
-              <button
-                onClick={() => removeSkill(skill.command)}
-                className="w-4 h-4 flex items-center justify-center rounded hover:bg-black/10 transition-colors shrink-0"
-              >
-                <X className="w-2.5 h-2.5" />
-              </button>
-            </div>
-          ))}
+              {isLoading
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : <ArrowUp className="w-3.5 h-3.5" />
+              }
+            </button>
+          </div>
         </div>
-      )}
-
-      {/* Input bar */}
-      <div className={cn(
-        'flex items-center gap-2 bg-white border rounded-xl px-3 py-2 shadow-lg transition-all',
-        'focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-400',
-        loading ? 'border-violet-200 bg-violet-50/20' : 'border-gray-200',
-      )}>
-        <Sparkles className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-        <div className="flex-1 min-w-0">
-          <input
-            ref={inputRef}
-            value={message}
-            onChange={e => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Iterate on this workflow… try /skill to browse skills"
-            disabled={loading}
-            className="w-full bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none disabled:opacity-40 leading-[1.4]"
-          />
-        </div>
-        <button
-          onClick={handleSubmit}
-          disabled={(!message.trim() && selectedSkills.length === 0) || loading}
-          className={cn(
-            'shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all',
-            (message.trim() || selectedSkills.length > 0) && !loading
-              ? 'bg-violet-600 hover:bg-violet-700 text-white shadow-sm'
-              : 'bg-gray-100 text-gray-300 cursor-not-allowed',
-          )}
-        >
-          {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3 h-3" />}
-        </button>
       </div>
     </div>
   );

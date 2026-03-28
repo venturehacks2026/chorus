@@ -18,12 +18,21 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const body = await req.json() as { graph_json: unknown };
+  const body = await req.json() as { graph_json?: unknown; canvas_json?: unknown };
   const supabase = createServerSupabase();
+
+  const update: Record<string, unknown> = {};
+  if (body.graph_json !== undefined) {
+    update.graph_json = body.graph_json;
+    update.status = 'draft';
+  }
+  if (body.canvas_json !== undefined) {
+    update.canvas_json = body.canvas_json;
+  }
 
   const { data: workflow, error } = await supabase
     .from('workflows')
-    .update({ graph_json: body.graph_json, status: 'draft' })
+    .update(update)
     .eq('id', id).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   ReactFlow,
   Background,
@@ -23,6 +23,26 @@ import { useWorkflowStore } from '@/stores/workflowStore';
 import { useExecutionStore } from '@/stores/executionStore';
 import { useUIStore } from '@/stores/uiStore';
 import { FileText } from 'lucide-react';
+import { cn } from '@/lib/cn';
+
+function FitViewOnChange() {
+  const { fitView } = useReactFlow();
+  const nodes = useWorkflowStore((s) => s.nodes);
+  const prevCount = useRef(-1);
+
+  useEffect(() => {
+    if (nodes.length !== prevCount.current) {
+      prevCount.current = nodes.length;
+      if (nodes.length === 0) return;
+      const t = setTimeout(() => {
+        fitView({ padding: 0.2, duration: 300 });
+      }, 60);
+      return () => clearTimeout(t);
+    }
+  }, [nodes.length, fitView]);
+
+  return null;
+}
 
 function FitViewOnStream() {
   const { fitView } = useReactFlow();
@@ -47,21 +67,30 @@ export default function WorkflowCanvas({ readonly = false }: { readonly?: boolea
   const onNodesChange = useWorkflowStore((s) => s.onNodesChange);
   const onEdgesChange = useWorkflowStore((s) => s.onEdgesChange);
   const setEdges = useWorkflowStore((s) => s.setEdges);
-  const retryEdges = useExecutionStore((s) => s.retryEdges);
+  const agentStatuses = useExecutionStore((s) => s.agentStatuses);
+  const isRunning = useExecutionStore((s) => s.isRunning);
 
   const edges: Edge[] = useMemo(() => {
-    const retryArr: Edge[] = Object.values(retryEdges).map((r) => ({
-      id: r.id,
-      source: r.shieldId,
-      target: r.targetAgentId,
-      type: 'smoothstep',
-      animated: true,
-      style: { stroke: '#ef4444', strokeWidth: 2, strokeDasharray: '6 3' },
-      label: 'retry',
-      labelStyle: { fill: '#ef4444', fontSize: 10, fontWeight: 600 },
-    }));
-    return [...storeEdges, ...retryArr];
-  }, [storeEdges, retryEdges]);
+    if (!isRunning) return storeEdges;
+    return storeEdges.map((e) => {
+      const targetStatus = agentStatuses[e.target];
+      const sourceStatus = agentStatuses[e.source];
+      const shouldAnimate =
+        targetStatus === 'running' ||
+        (sourceStatus === 'completed' && targetStatus === 'running');
+      const isCompleted = sourceStatus === 'completed' && targetStatus === 'completed';
+      const baseStyle = (e.style ?? {}) as Record<string, unknown>;
+      return {
+        ...e,
+        animated: shouldAnimate,
+        style: {
+          ...baseStyle,
+          stroke: shouldAnimate ? '#3b82f6' : isCompleted ? '#10b981' : (baseStyle.stroke as string) ?? '#7c3aed',
+          strokeWidth: shouldAnimate ? 2 : (baseStyle.strokeWidth as number) ?? 1.5,
+        },
+      };
+    });
+  }, [storeEdges, agentStatuses, isRunning]);
 
   const onConnect = useCallback(
     (connection: Connection) =>
@@ -81,7 +110,7 @@ export default function WorkflowCanvas({ readonly = false }: { readonly?: boolea
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
-        fitViewOptions={{ padding: 0.25 }}
+        fitViewOptions={{ padding: 0.2 }}
         nodesDraggable={!readonly}
         nodesConnectable={!readonly}
         proOptions={{ hideAttribution: true }}
@@ -96,9 +125,12 @@ export default function WorkflowCanvas({ readonly = false }: { readonly?: boolea
             <button
               onClick={() => setSopViewerOpen(!sopViewerOpen)}
               title="Toggle SOP document viewer"
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                sopViewerOpen ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-white border-gray-200 text-gray-500 hover:text-gray-900'
-              }`}
+              className={cn(
+                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors',
+                sopViewerOpen
+                  ? 'bg-violet-50 text-violet-700 border-violet-200'
+                  : 'bg-white border-gray-200 text-gray-500 hover:text-gray-900',
+              )}
             >
               <FileText className="w-3 h-3" />
               SOP
@@ -109,6 +141,7 @@ export default function WorkflowCanvas({ readonly = false }: { readonly?: boolea
         <Panel position="top-center">
           <CoverageBar />
         </Panel>
+        <FitViewOnChange />
       </ReactFlow>
     </div>
   );

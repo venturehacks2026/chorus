@@ -8,6 +8,7 @@ import { ArrowUp, Loader2, Trash2, ExternalLink, Mic, MicOff } from 'lucide-reac
 import dynamic from 'next/dynamic';
 import type { Workflow, WorkflowStatus, AgentNodeData } from '@/lib/types';
 import { useWorkflowStore } from '@/stores/workflowStore';
+import { useExecutionStore } from '@/stores/executionStore';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { cn } from '@/lib/cn';
 
@@ -59,9 +60,11 @@ export default function Dashboard() {
 
   // Use global workflow store so the canvas is live
   const addStreamedAgent = useWorkflowStore(s => s.addStreamedAgent);
+  const addOutputNode = useWorkflowStore(s => s.addOutputNode);
   const loadGraph = useWorkflowStore(s => s.loadGraph);
   const initStreamingInput = useWorkflowStore(s => s.initStreamingInput);
   const nodes = useWorkflowStore(s => s.nodes);
+  const resetExecution = useExecutionStore(s => s.reset);
 
   const { data: workflows = [], isLoading } = useQuery<Workflow[]>({
     queryKey: ['workflows'],
@@ -93,7 +96,7 @@ export default function Dashboard() {
     setBuilding(true);
     setBuiltWorkflowId(null);
     setBuildError(null);
-    // Reset graph for a fresh build
+    resetExecution();
     loadGraph('__building__', { agents: [], edges: [] });
 
     abortRef.current = new AbortController();
@@ -143,14 +146,23 @@ export default function Dashboard() {
             }
 
             if (event.type === 'done') {
+              addOutputNode();
               qc.invalidateQueries({ queryKey: ['workflows'] });
               setBuilding(false);
               setPrompt('');
               setName('');
-              // Navigate after brief pause so user sees the complete graph
+              // Persist canvas state after output node is added
               setTimeout(() => {
-                if (workflowId) router.push(`/workflows/${workflowId}`);
-              }, 900);
+                if (workflowId) {
+                  const canvas = useWorkflowStore.getState().getCanvasJson();
+                  fetch(`/api/workflows/${workflowId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ canvas_json: canvas }),
+                  }).catch(() => {});
+                  router.push(`/workflows/${workflowId}`);
+                }
+              }, 400);
             }
 
             if (event.type === 'error') {
@@ -168,7 +180,7 @@ export default function Dashboard() {
       }
       setBuilding(false);
     }
-  }, [prompt, name, building, router, qc, addStreamedAgent, loadGraph, initStreamingInput]);
+  }, [prompt, name, building, router, qc, addStreamedAgent, addOutputNode, loadGraph, initStreamingInput, resetExecution]);
 
   function handleKey(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) {

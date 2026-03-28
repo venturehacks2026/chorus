@@ -19,10 +19,6 @@ export class DataStoreConnector extends ConnectorBase {
         enum: ['insert', 'query', 'list_tables', 'describe', 'delete'],
         description: 'insert: add row(s) | query: filter rows | list_tables: see all table names | describe: get table schema | delete: remove rows by id',
       },
-      workflow_id: {
-        type: 'string',
-        description: 'The workflow ID that owns this silo (injected automatically by the orchestrator)',
-      },
       silo_name: {
         type: 'string',
         description: 'Name of the data silo (e.g. "research_results", "price_data"). Created automatically if it doesn\'t exist.',
@@ -48,13 +44,12 @@ export class DataStoreConnector extends ConnectorBase {
         items: { type: 'string' },
       },
     },
-    required: ['action', 'workflow_id', 'silo_name'],
+    required: ['action', 'silo_name'],
   };
 
   async call({ config, input }: ConnectorCallInput): Promise<ConnectorCallOutput> {
     const {
       action,
-      workflow_id,
       silo_name,
       table_name = 'default',
       data,
@@ -63,7 +58,6 @@ export class DataStoreConnector extends ConnectorBase {
       ids,
     } = input as {
       action: string;
-      workflow_id: string;
       silo_name: string;
       table_name?: string;
       data?: unknown;
@@ -72,9 +66,8 @@ export class DataStoreConnector extends ConnectorBase {
       ids?: string[];
     };
 
-    // Allow workflow_id to be injected via config (set by orchestrator) as fallback
-    const wfId = workflow_id || (config.workflow_id as string);
-    if (!wfId) return { content: 'Error: workflow_id is required' };
+    const wfId = config.workflow_id as string;
+    if (!wfId) return { content: 'Error: workflow_id not injected by orchestrator' };
 
     const supabase = createServerSupabase();
 

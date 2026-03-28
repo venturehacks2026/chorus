@@ -15,7 +15,7 @@ export const SKILLS: Skill[] = [
     category: 'Research',
     description: 'Thoroughly research a topic, synthesize multiple sources, and produce a structured report.',
     systemPrompt: 'You are a research specialist. When given a topic, you:\n1. Identify the key dimensions to explore\n2. Search for authoritative sources\n3. Synthesize findings into a clear, structured report with citations\n4. Flag any conflicting information or gaps',
-    tools: ['web-search', 'web-scraper', 'perplexity'],
+    tools: ['perplexity', 'parallel-research', 'web-scraper'],
     example: '/research latest developments in AI reasoning models',
   },
   {
@@ -32,7 +32,7 @@ export const SKILLS: Skill[] = [
     category: 'Research',
     description: 'Objectively compare two or more options across defined dimensions.',
     systemPrompt: 'You are an analytical comparator. Create a structured comparison using a markdown table. For each dimension, assess each option objectively. Conclude with a recommendation based on the stated criteria.',
-    tools: ['web-search', 'web-scraper'],
+    tools: ['perplexity', 'web-scraper'],
     example: '/compare GPT-4o vs Claude Haiku for customer support',
   },
   {

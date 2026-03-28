@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -10,6 +10,7 @@ import {
   BackgroundVariant,
   type Connection,
   addEdge,
+  useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { nodeTypes } from './nodes';
@@ -20,6 +21,27 @@ import CoverageBar from './toolbar/CoverageBar';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import { useUIStore } from '@/stores/uiStore';
 import { FileText } from 'lucide-react';
+import { cn } from '@/lib/cn';
+import { cn } from '@/lib/cn';
+
+function FitViewOnChange() {
+  const { fitView } = useReactFlow();
+  const nodes = useWorkflowStore((s) => s.nodes);
+  const prevCount = useRef(-1);
+
+  useEffect(() => {
+    if (nodes.length !== prevCount.current) {
+      prevCount.current = nodes.length;
+      if (nodes.length === 0) return;
+      const t = setTimeout(() => {
+        fitView({ padding: 0.2, duration: 300 });
+      }, 60);
+      return () => clearTimeout(t);
+    }
+  }, [nodes.length, fitView]);
+
+  return null;
+}
 
 export default function WorkflowCanvas({ readonly = false }: { readonly?: boolean }) {
   const sopViewerOpen = useUIStore((s) => s.sopViewerOpen);
@@ -48,7 +70,7 @@ export default function WorkflowCanvas({ readonly = false }: { readonly?: boolea
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
-        fitViewOptions={{ padding: 0.25 }}
+        fitViewOptions={{ padding: 0.2 }}
         nodesDraggable={!readonly}
         nodesConnectable={!readonly}
         proOptions={{ hideAttribution: true }}
@@ -62,9 +84,12 @@ export default function WorkflowCanvas({ readonly = false }: { readonly?: boolea
             <button
               onClick={() => setSopViewerOpen(!sopViewerOpen)}
               title="Toggle SOP document viewer"
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                sopViewerOpen ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-white border-gray-200 text-gray-500 hover:text-gray-900'
-              }`}
+              className={cn(
+                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors',
+                sopViewerOpen
+                  ? 'bg-violet-50 text-violet-700 border-violet-200'
+                  : 'bg-white border-gray-200 text-gray-500 hover:text-gray-900',
+              )}
             >
               <FileText className="w-3 h-3" />
               SOP
@@ -75,6 +100,7 @@ export default function WorkflowCanvas({ readonly = false }: { readonly?: boolea
         <Panel position="top-center">
           <CoverageBar />
         </Panel>
+        <FitViewOnChange />
       </ReactFlow>
     </div>
   );

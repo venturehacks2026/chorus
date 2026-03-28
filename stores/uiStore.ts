@@ -33,6 +33,10 @@ interface UIStore {
   // Contract suggestion tooltip
   tooltipNodeId: string | null;
   setTooltipNodeId: (id: string | null) => void;
+
+  // Node full-page expand
+  expandedNodeId: string | null;
+  setExpandedNodeId: (id: string | null) => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -62,4 +66,7 @@ export const useUIStore = create<UIStore>((set) => ({
 
   tooltipNodeId: null,
   setTooltipNodeId: (id) => set({ tooltipNodeId: id }),
+
+  expandedNodeId: null,
+  setExpandedNodeId: (id) => set({ expandedNodeId: id }),
 }));

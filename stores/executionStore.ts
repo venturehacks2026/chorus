@@ -2,6 +2,18 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AgentStatus, WorkflowStatus } from '@/lib/types';
 
+export interface ContractShieldState {
+  status: 'checking' | 'pass' | 'fail' | 'retrying';
+  lastResult?: string;
+  retryCount?: number;
+}
+
+interface RetryEdge {
+  id: string;
+  shieldId: string;
+  targetAgentId: string;
+}
+
 interface ExecutionStore {
   executionId: string | null;
   executionStatus: WorkflowStatus;
@@ -9,13 +21,18 @@ interface ExecutionStore {
   agentExecutionIds: Record<string, string>;
   selectedAgentExecutionId: string | null;
   isRunning: boolean;
-  // The workflow this execution belongs to — used for rehydration
+  contractShields: Record<string, ContractShieldState>;
+  retryEdges: Record<string, RetryEdge>;
   executionWorkflowId: string | null;
 
   startExecution: (executionId: string, workflowId?: string) => void;
   updateAgentStatus: (agentId: string, status: AgentStatus, execId?: string) => void;
   updateExecutionStatus: (status: WorkflowStatus) => void;
   selectAgentExecution: (id: string | null) => void;
+  setContractShield: (shieldId: string, state: ContractShieldState) => void;
+  clearContractShields: () => void;
+  addRetryEdge: (shieldId: string, sourceAgentId: string) => void;
+  removeRetryEdge: (shieldId: string) => void;
   reset: () => void;
 }
 
@@ -26,6 +43,8 @@ const initial = {
   agentExecutionIds: {},
   selectedAgentExecutionId: null,
   isRunning: false,
+  contractShields: {},
+  retryEdges: {},
   executionWorkflowId: null,
 };
 
@@ -41,6 +60,8 @@ export const useExecutionStore = create<ExecutionStore>()(
           isRunning: true,
           agentStatuses: {},
           agentExecutionIds: {},
+          contractShields: {},
+          retryEdges: {},
           executionWorkflowId: workflowId ?? null,
         }),
 
@@ -57,11 +78,34 @@ export const useExecutionStore = create<ExecutionStore>()(
 
       selectAgentExecution: (id) => set({ selectedAgentExecutionId: id }),
 
+      setContractShield: (shieldId, state) =>
+        set((s) => ({ contractShields: { ...s.contractShields, [shieldId]: state } })),
+
+      clearContractShields: () => set({ contractShields: {}, retryEdges: {} }),
+
+      addRetryEdge: (shieldId, sourceAgentId) =>
+        set((s) => ({
+          retryEdges: {
+            ...s.retryEdges,
+            [shieldId]: {
+              id: `retry-${shieldId}`,
+              shieldId,
+              targetAgentId: sourceAgentId,
+            },
+          },
+        })),
+
+      removeRetryEdge: (shieldId) =>
+        set((s) => {
+          const next = { ...s.retryEdges };
+          delete next[shieldId];
+          return { retryEdges: next };
+        }),
+
       reset: () => set(initial),
     }),
     {
       name: 'chorus-execution',
-      // Only persist the IDs and statuses — not UI-only state
       partialize: (s) => ({
         executionId: s.executionId,
         executionStatus: s.executionStatus,

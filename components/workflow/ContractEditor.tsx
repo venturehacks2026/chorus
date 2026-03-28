@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, Shield } from 'lucide-react';
+import { Plus, Trash2, Shield, FileText, Loader2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import type { Contract } from '@/lib/types';
@@ -13,6 +13,7 @@ export default function ContractEditor({ workflowId }: { workflowId: string }) {
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ description: '', judge_prompt: '', blocking: false });
+  const [assigningSop, setAssigningSop] = useState(false);
 
   const { data: contracts = [] } = useQuery<Contract[]>({
     queryKey: ['contracts', workflowId, selectedId],
@@ -38,28 +39,61 @@ export default function ContractEditor({ workflowId }: { workflowId: string }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['contracts', workflowId, selectedId] }),
   });
 
+  const nodes = useWorkflowStore((s) => s.nodes);
+  const inputNode = nodes.find(n => n.id === 'kb-input');
+  const sopId = inputNode?.data?.sopId as string | undefined;
+
+  async function assignFromSop() {
+    if (!sopId || assigningSop) return;
+    setAssigningSop(true);
+    try {
+      const agentNodes = nodes.filter(n => n.type === 'agent');
+      const agents = agentNodes.map(n => ({ id: n.id, name: String(n.data?.name ?? ''), role: String(n.data?.role ?? '') }));
+      await fetch('/api/contracts/assign-from-sop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sop_id: sopId, workflow_id: workflowId, agents }),
+      });
+      qc.invalidateQueries({ queryKey: ['contracts', workflowId, selectedId] });
+    } finally {
+      setAssigningSop(false);
+    }
+  }
+
   if (!selectedId) {
     return (
-      <div className="w-72 border-l border-gray-100 bg-gray-50/40 flex items-center justify-center text-xs text-gray-400 px-6 text-center">
+      <div className="h-full border-l border-gray-100 bg-gray-50/40 flex items-center justify-center text-xs text-gray-400 px-6 text-center">
         Select an agent to manage contracts
       </div>
     );
   }
 
   return (
-    <div className="w-72 border-l border-gray-100 bg-gray-50/40 flex flex-col">
+    <div className="h-full border-l border-gray-100 bg-gray-50/40 flex flex-col">
       <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100 bg-white">
         <div className="flex items-center gap-2">
           <Shield className="w-4 h-4 text-violet-500" />
           <span className="text-sm font-semibold text-gray-900">Contracts</span>
           <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-md font-medium">{contracts.length}</span>
         </div>
-        <button
-          onClick={() => setShowForm(x => !x)}
-          className="flex items-center gap-1 px-2.5 py-1.5 bg-violet-600 hover:bg-violet-700 rounded-lg text-xs text-white font-medium transition-colors shadow-sm"
-        >
-          <Plus className="w-3 h-3" /> Add
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowForm(x => !x)}
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-violet-600 hover:bg-violet-700 rounded-lg text-xs text-white font-medium transition-colors shadow-sm"
+          >
+            <Plus className="w-3 h-3" /> Add
+          </button>
+          {sopId && (
+            <button
+              onClick={assignFromSop}
+              disabled={assigningSop}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg text-xs text-amber-700 font-medium transition-colors"
+            >
+              {assigningSop ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />}
+              From SOP
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
@@ -124,6 +158,11 @@ export default function ContractEditor({ workflowId }: { workflowId: string }) {
                 {c.blocking && (
                   <span className="inline-block mt-1.5 text-[10px] px-1.5 py-0.5 bg-red-50 text-red-500 rounded-md font-medium">
                     Blocking
+                  </span>
+                )}
+                {c.sop_id && (
+                  <span className="inline-block mt-1.5 ml-1 text-[10px] px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded-md font-medium">
+                    From SOP
                   </span>
                 )}
               </div>

@@ -18,6 +18,28 @@ export default function KnowledgeBasePage() {
   const [compilingSopIds, setCompilingSopIds] = useState<Set<string>>(new Set());
   const [viewingSopId, setViewingSopId] = useState<string | null>(null);
   const [deletingSopId, setDeletingSopId] = useState<string | null>(null);
+  const [extractingSopIds, setExtractingSopIds] = useState<Set<string>>(new Set());
+
+  async function extractContractsFromSop(sop: { id: string; title: string; content?: string }) {
+    setExtractingSopIds(prev => new Set(prev).add(sop.id));
+    try {
+      let content = sop.content;
+      if (!content) {
+        const res = await fetch(`/api/knowledge/sops/${sop.id}`);
+        const data = await res.json();
+        content = data.content ?? '';
+      }
+      await fetch('/api/contracts/extract-from-sop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sop_id: sop.id, sop_content: content, sop_title: sop.title }),
+      });
+    } catch {
+      // Contract extraction is non-blocking
+    } finally {
+      setExtractingSopIds(prev => { const next = new Set(prev); next.delete(sop.id); return next; });
+    }
+  }
 
   // ── Data fetching ──
   const { data: sops = [], isLoading: sopsLoading } = useQuery<SOPListItem[]>({
@@ -51,9 +73,12 @@ export default function KnowledgeBasePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       }).then(r => r.json()),
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       qc.invalidateQueries({ queryKey: ['sops'] });
       setUploadOpen(false);
+      if (data?.id) {
+        extractContractsFromSop({ id: data.id, title: variables.title, content: variables.content });
+      }
     },
   });
 
@@ -63,9 +88,12 @@ export default function KnowledgeBasePage() {
         method: 'POST',
         body: formData,
       }).then(r => r.json()),
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['sops'] });
       setUploadOpen(false);
+      if (data?.id) {
+        extractContractsFromSop({ id: data.id, title: data.title ?? 'Uploaded SOP' });
+      }
     },
   });
 

@@ -7,6 +7,7 @@ import WaitNode from './WaitNode';
 import ErrorNode from './ErrorNode';
 import SkillNode from './SkillNode';
 import { AgentNode } from '../AgentNode';
+import { ContractShieldNode } from './ContractShieldNode';
 
 // Module-scope registration — never define inside a component
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -20,6 +21,8 @@ export const nodeTypes: Record<string, any> = {
   wait: WaitNode,
   error: ErrorNode,
   skill: SkillNode,
+  // Contract verification gates between agents
+  'contract-shield': ContractShieldNode,
   // Legacy agent node (existing workflow system)
   agent: AgentNode,
 };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
@@ -9,7 +9,9 @@ import {
   Panel,
   BackgroundVariant,
   type Connection,
+  type Edge,
   addEdge,
+  useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { nodeTypes } from './nodes';
@@ -18,22 +20,53 @@ import EdgeMarkerDefs from './edges/EdgeMarkerDefs';
 import OverlayToggle from './toolbar/OverlayToggle';
 import CoverageBar from './toolbar/CoverageBar';
 import { useWorkflowStore } from '@/stores/workflowStore';
+import { useExecutionStore } from '@/stores/executionStore';
 import { useUIStore } from '@/stores/uiStore';
 import { FileText } from 'lucide-react';
+
+function FitViewOnStream() {
+  const { fitView } = useReactFlow();
+  const nodeCount = useWorkflowStore((s) => s.nodes.length);
+  const prevCount = useRef(nodeCount);
+
+  useEffect(() => {
+    if (nodeCount !== prevCount.current && nodeCount > 0) {
+      prevCount.current = nodeCount;
+      fitView({ padding: 0.25, duration: 600 });
+    }
+  }, [nodeCount, fitView]);
+
+  return null;
+}
 
 export default function WorkflowCanvas({ readonly = false }: { readonly?: boolean }) {
   const sopViewerOpen = useUIStore((s) => s.sopViewerOpen);
   const setSopViewerOpen = useUIStore((s) => s.setSopViewerOpen);
   const nodes = useWorkflowStore((s) => s.nodes);
-  const edges = useWorkflowStore((s) => s.edges);
+  const storeEdges = useWorkflowStore((s) => s.edges);
   const onNodesChange = useWorkflowStore((s) => s.onNodesChange);
   const onEdgesChange = useWorkflowStore((s) => s.onEdgesChange);
   const setEdges = useWorkflowStore((s) => s.setEdges);
+  const retryEdges = useExecutionStore((s) => s.retryEdges);
+
+  const edges: Edge[] = useMemo(() => {
+    const retryArr: Edge[] = Object.values(retryEdges).map((r) => ({
+      id: r.id,
+      source: r.shieldId,
+      target: r.targetAgentId,
+      type: 'smoothstep',
+      animated: true,
+      style: { stroke: '#ef4444', strokeWidth: 2, strokeDasharray: '6 3' },
+      label: 'retry',
+      labelStyle: { fill: '#ef4444', fontSize: 10, fontWeight: 600 },
+    }));
+    return [...storeEdges, ...retryArr];
+  }, [storeEdges, retryEdges]);
 
   const onConnect = useCallback(
     (connection: Connection) =>
-      setEdges(addEdge({ ...connection, type: 'smoothstep', style: { stroke: '#7c3aed', strokeWidth: 1.5 } }, edges)),
-    [edges, setEdges],
+      setEdges(addEdge({ ...connection, type: 'smoothstep', style: { stroke: '#7c3aed', strokeWidth: 1.5 } }, storeEdges)),
+    [storeEdges, setEdges],
   );
 
   return (
@@ -57,6 +90,7 @@ export default function WorkflowCanvas({ readonly = false }: { readonly?: boolea
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e5e7eb" />
         <Controls />
         <MiniMap nodeColor="#ede9fe" maskColor="rgba(249,249,251,0.85)" />
+        <FitViewOnStream />
         <Panel position="top-right">
           <div className="flex items-center gap-2">
             <button

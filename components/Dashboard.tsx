@@ -60,6 +60,7 @@ export default function Dashboard() {
   // Use global workflow store so the canvas is live
   const addStreamedAgent = useWorkflowStore(s => s.addStreamedAgent);
   const loadGraph = useWorkflowStore(s => s.loadGraph);
+  const initStreamingInput = useWorkflowStore(s => s.initStreamingInput);
   const nodes = useWorkflowStore(s => s.nodes);
 
   const { data: workflows = [], isLoading } = useQuery<Workflow[]>({
@@ -133,6 +134,7 @@ export default function Dashboard() {
             if (event.type === 'created' && event.workflowId) {
               workflowId = event.workflowId;
               setBuiltWorkflowId(workflowId);
+              initStreamingInput(trimmed);
             }
 
             if (event.type === 'agent' && event.agent) {
@@ -166,7 +168,7 @@ export default function Dashboard() {
       }
       setBuilding(false);
     }
-  }, [prompt, name, building, router, qc, addStreamedAgent, loadGraph]);
+  }, [prompt, name, building, router, qc, addStreamedAgent, loadGraph, initStreamingInput]);
 
   function handleKey(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) {

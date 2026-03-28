@@ -53,8 +53,9 @@ export interface AgentEdge {
 
 export interface Contract {
   id: string;
-  workflow_id: string;
-  agent_id: string;
+  workflow_id: string | null;
+  agent_id: string | null;
+  sop_id?: string | null;
   description: string;
   judge_prompt: string;
   sequence: number;

@@ -41,7 +41,7 @@ export default function AgentConfigPanel() {
 
   if (!selectedId || !agent) {
     return (
-      <div className="w-72 border-l border-gray-100 bg-gray-50/50 flex items-center justify-center text-xs text-gray-400 px-6 text-center">
+      <div className="h-full border-l border-gray-100 bg-gray-50/50 flex items-center justify-center text-xs text-gray-400 px-6 text-center">
         Click an agent to configure it
       </div>
     );
@@ -89,7 +89,7 @@ export default function AgentConfigPanel() {
   const unusedConnectors = connectors.filter(c => !(form.tools ?? []).some(t => t.connector_id === c.slug));
 
   return (
-    <div className="w-72 border-l border-gray-100 bg-gray-50/40 flex flex-col">
+    <div className="h-full border-l border-gray-100 bg-gray-50/40 flex flex-col">
       <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100 bg-white">
         <span className="text-sm font-semibold text-gray-900">Agent config</span>
         <button

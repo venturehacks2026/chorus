@@ -121,34 +121,77 @@ export async function POST(req: Request) {
             rawJson += event.delta.text;
 
             // Extract complete agent objects as they stream in
-            const agentRegex = /\{[^{}]*"id"\s*:\s*"(agent-\d+)"[\s\S]*?"position"\s*:\s*\{[^}]+\}[^{}]*\}/g;
-            let match: RegExpExecArray | null;
-            while ((match = agentRegex.exec(rawJson)) !== null) {
-              const agentId = match[1];
-              if (!emittedAgentIds.has(agentId)) {
-                try {
-                  const agent = JSON.parse(match[0]) as AgentNodeData;
-                  // Ensure proper spacing if position missing
-                  if (!agent.position) {
-                    agent.position = { x: 150 + emittedAgentIds.size * 420, y: 200 };
-                  }
-                  emittedAgentIds.add(agentId);
-                  send({ type: 'agent', agent });
-                } catch {
-                  // partial match, keep accumulating
+            // Find agent-N IDs not yet emitted and try to extract their full object
+            const idMatches = rawJson.matchAll(/"id"\s*:\s*"(agent-\d+)"/g);
+            for (const idMatch of idMatches) {
+              const agentId = idMatch[1];
+              if (emittedAgentIds.has(agentId)) continue;
+              // Find the opening brace before this id
+              const idPos = idMatch.index!;
+              let depth = 0, start = -1;
+              for (let i = idPos; i >= 0; i--) {
+                if (rawJson[i] === '}') depth++;
+                else if (rawJson[i] === '{') {
+                  if (depth === 0) { start = i; break; }
+                  depth--;
                 }
+              }
+              if (start === -1) continue;
+              // Find the closing brace
+              depth = 0;
+              let end = -1;
+              for (let i = start; i < rawJson.length; i++) {
+                if (rawJson[i] === '{') depth++;
+                else if (rawJson[i] === '}') {
+                  depth--;
+                  if (depth === 0) { end = i; break; }
+                }
+              }
+              if (end === -1) continue;
+              try {
+                const agent = JSON.parse(rawJson.slice(start, end + 1)) as AgentNodeData;
+                if (!agent.position) {
+                  agent.position = { x: 150 + emittedAgentIds.size * 420, y: 200 };
+                }
+                emittedAgentIds.add(agentId);
+                send({ type: 'agent', agent });
+              } catch {
+                // incomplete object, keep accumulating
               }
             }
           }
         }
 
-        // 3. Parse final complete graph
-        const cleaned = rawJson.replace(/^```(?:json)?\s*/m, '').replace(/\s*```$/m, '').trim();
+        // 3. Parse final complete graph — try multiple strategies
+        let graph: WorkflowGraph | null = null;
 
-        let graph: WorkflowGraph;
+        // Strategy 1: strip markdown fences then parse
+        const stripped = rawJson
+          .replace(/^```(?:json)?\s*/gm, '')
+          .replace(/^```\s*/gm, '')
+          .trim();
         try {
-          graph = JSON.parse(cleaned) as WorkflowGraph;
-        } catch {
+          graph = JSON.parse(stripped) as WorkflowGraph;
+        } catch { /* try next */ }
+
+        // Strategy 2: extract the outermost JSON object
+        if (!graph) {
+          const start = rawJson.indexOf('{');
+          const end = rawJson.lastIndexOf('}');
+          if (start !== -1 && end !== -1 && end > start) {
+            try {
+              graph = JSON.parse(rawJson.slice(start, end + 1)) as WorkflowGraph;
+            } catch { /* try next */ }
+          }
+        }
+
+        // Strategy 3: use whatever agents were already streamed
+        if (!graph && emittedAgentIds.size > 0) {
+          console.warn('[stream] Falling back to streamed agents only');
+          graph = { agents: [], edges: [] };
+        }
+
+        if (!graph) {
           send({ type: 'error', message: 'Failed to parse final graph JSON' });
           controller.close();
           return;

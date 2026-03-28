@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   X, Loader2, CheckCircle, XCircle, Clock, Wrench, Brain,
   ArrowRight, ChevronDown, ChevronRight as ChevronR, Shield, Minus, Database,
@@ -14,48 +16,15 @@ import type {
 } from '@/lib/types';
 import { cn } from '@/lib/cn';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Markdown renderer ───────────────────────────────────────────────────────
 
-/**
- * Detect and render inline code or full code blocks in a text string.
- * Splits on ```lang\n…\n``` fences and `inline` ticks.
- */
 function RichText({ text }: { text: string }) {
-  // First split on fenced code blocks
-  const parts = text.split(/(```[\s\S]*?```)/g);
   return (
-    <span className="leading-relaxed">
-      {parts.map((part, i) => {
-        if (part.startsWith('```')) {
-          // Strip the fence markers and optional language tag
-          const inner = part.replace(/^```[^\n]*\n?/, '').replace(/```$/, '');
-          return (
-            <pre
-              key={i}
-              className="block mt-1.5 mb-1.5 p-2.5 rounded-lg bg-gray-950 text-emerald-300 text-[11px] font-mono whitespace-pre overflow-x-auto border border-gray-800"
-            >
-              {inner}
-            </pre>
-          );
-        }
-        // Handle inline `code` within this segment
-        const inline = part.split(/(`[^`]+`)/g);
-        return (
-          <span key={i}>
-            {inline.map((seg, j) => {
-              if (seg.startsWith('`') && seg.endsWith('`') && seg.length > 2) {
-                return (
-                  <code key={j} className="px-1 py-0.5 rounded bg-gray-100 text-violet-700 text-[11px] font-mono">
-                    {seg.slice(1, -1)}
-                  </code>
-                );
-              }
-              return <span key={j}>{seg}</span>;
-            })}
-          </span>
-        );
-      })}
-    </span>
+    <div className="prose prose-sm max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:mb-1.5 prose-headings:mt-2.5 prose-p:my-1 prose-p:text-gray-600 prose-p:leading-relaxed prose-p:break-words prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-li:text-gray-600 prose-strong:text-gray-800 prose-a:text-violet-600 prose-a:no-underline hover:prose-a:underline prose-code:text-violet-700 prose-code:bg-gray-100 prose-code:rounded prose-code:px-1 prose-code:py-0.5 prose-code:text-[11px] prose-pre:bg-gray-950 prose-pre:text-emerald-300 prose-pre:text-[11px] prose-pre:rounded-lg prose-pre:border prose-pre:border-gray-800 prose-blockquote:border-violet-300 prose-blockquote:text-gray-500 prose-table:text-[11px]">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        {text}
+      </ReactMarkdown>
+    </div>
   );
 }
 
@@ -81,13 +50,11 @@ function LlmBlock({ steps, isStreaming }: { steps: ExecutionStep[]; isStreaming:
   return (
     <div className="flex gap-2 py-1 group">
       <Brain className="w-3 h-3 text-gray-300 mt-1 flex-shrink-0 group-hover:text-violet-300 transition-colors" />
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-gray-600 leading-relaxed">
-          {text ? <RichText text={text} /> : null}
-          {isStreaming && (
-            <span className="inline-block w-1.5 h-3.5 bg-violet-400 ml-0.5 animate-pulse rounded-sm align-middle" />
-          )}
-        </p>
+      <div className="flex-1 min-w-0 overflow-hidden">
+        {text ? <RichText text={text} /> : null}
+        {isStreaming && (
+          <span className="inline-block w-1.5 h-3.5 bg-violet-400 ml-0.5 animate-pulse rounded-sm align-middle" />
+        )}
       </div>
     </div>
   );
@@ -418,14 +385,14 @@ export default function ExecutionPanel({ workflowAgents }: { workflowAgents: Age
 
   if (!executionId) {
     return (
-      <div className="w-96 h-full bg-gray-50/40 border-l border-gray-100 flex items-center justify-center text-xs text-gray-400 px-6 text-center">
+      <div className="h-full bg-gray-50/40 border-l border-gray-100 flex items-center justify-center text-xs text-gray-400 px-6 text-center">
         Hit <strong className="text-gray-700 mx-1">Run</strong> to start execution
       </div>
     );
   }
 
   return (
-    <div className="w-96 h-full bg-gray-50/40 border-l border-gray-100 flex flex-col">
+    <div className="h-full bg-gray-50/40 border-l border-gray-100 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-white shrink-0">
         <div className="flex items-center gap-2">

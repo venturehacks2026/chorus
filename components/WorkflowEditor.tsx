@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import { useExecutionStore } from '@/stores/executionStore';
 import { supabase } from '@/lib/supabase-browser';
@@ -15,14 +16,14 @@ import ContractEditor from './workflow/ContractEditor';
 import ExecutionPanel from './execution/ExecutionPanel';
 
 const WorkflowCanvas = dynamic(() => import('./canvas/WorkflowCanvas'), { ssr: false });
+const ChatToolbar = dynamic(() => import('./canvas/ChatToolbar'), { ssr: false });
 
-type Panel = 'config' | 'contracts' | 'execution';
+type PanelTab = 'config' | 'contracts' | 'execution';
 
 export default function WorkflowEditor() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
   const loadGraph = useWorkflowStore((s) => s.loadGraph);
-  const addStreamedAgent = useWorkflowStore((s) => s.addStreamedAgent);
   const setEdges = useWorkflowStore((s) => s.setEdges);
   const toWorkflowGraph = useWorkflowStore((s) => s.toWorkflowGraph);
   const workflowId = useWorkflowStore((s) => s.workflowId);
@@ -31,7 +32,7 @@ export default function WorkflowEditor() {
   const startExecution = useExecutionStore((s) => s.startExecution);
   const updateAgentStatus = useExecutionStore((s) => s.updateAgentStatus);
   const updateExecutionStatus = useExecutionStore((s) => s.updateExecutionStatus);
-  const [panel, setPanel] = useState<Panel>('config');
+  const [panel, setPanel] = useState<PanelTab>('config');
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -51,7 +52,6 @@ export default function WorkflowEditor() {
 
     if (isEmpty && !streamDoneRef.current) {
       setIsStreaming(true);
-      // Poll until graph has agents
       const interval = setInterval(async () => {
         const r = await fetch(`/api/workflows/${id}`);
         const d = await r.json();
@@ -60,7 +60,6 @@ export default function WorkflowEditor() {
           streamDoneRef.current = true;
           setIsStreaming(false);
           loadGraph(d.workflow.id, d.workflow.graph_json);
-          // Remove streaming animation from edges once done
           setEdges(
             useWorkflowStore.getState().edges.map(e => ({ ...e, animated: false }))
           );
@@ -71,19 +70,18 @@ export default function WorkflowEditor() {
     } else if (!isEmpty && data.workflow.id !== workflowId) {
       loadGraph(data.workflow.id, data.workflow.graph_json);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.workflow?.id, data?.workflow?.graph_json?.agents?.length]);
 
-  // On mount: if we have a persisted executionId for this workflow, rehydrate state from DB
+  // On mount: rehydrate execution state from DB if applicable
   useEffect(() => {
     if (!id) return;
     const execWfId = useExecutionStore.getState().executionWorkflowId;
     const persistedExecId = useExecutionStore.getState().executionId;
-    // Only rehydrate if this execution belongs to the current workflow and is not already done
     if (!persistedExecId || execWfId !== id) return;
     const persistedStatus = useExecutionStore.getState().executionStatus;
     if (persistedStatus === 'completed' || persistedStatus === 'failed') return;
 
-    // Fetch live state from DB
     fetch(`/api/executions/${persistedExecId}`)
       .then(r => r.json())
       .then(({ execution, agent_executions }) => {
@@ -93,8 +91,7 @@ export default function WorkflowEditor() {
           updateAgentStatus(ae.agent_id, ae.status, ae.id);
         });
       })
-      .catch(() => {/* silently skip if network fails */});
-  // Only run on mount
+      .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -120,8 +117,7 @@ export default function WorkflowEditor() {
   }, [executionId]);
 
   useEffect(() => {
-    if (executionStatus === 'running') setPanel('execution');
-    if (executionStatus === 'completed' || executionStatus === 'failed') {
+    if (executionStatus === 'running' || executionStatus === 'completed' || executionStatus === 'failed') {
       setPanel('execution');
     }
   }, [executionStatus]);
@@ -196,7 +192,7 @@ export default function WorkflowEditor() {
 
         {/* Panel toggle */}
         <div className="flex bg-gray-100 border border-gray-200 rounded-lg p-0.5">
-          {(['config', 'contracts', ...(executionId ? ['execution'] : [])] as Panel[]).map((p) => {
+          {(['config', 'contracts', ...(executionId ? ['execution'] : [])] as PanelTab[]).map((p) => {
             const label = { config: 'Config', contracts: 'Contracts', execution: 'Live' }[p];
             return (
               <button
@@ -237,24 +233,37 @@ export default function WorkflowEditor() {
         </button>
       </div>
 
-      {/* Body */}
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 relative">
-          <WorkflowCanvas readonly={isExecRunning} />
-          {isStreaming && (
-            <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-end justify-center pb-8 pointer-events-none">
-              <div className="bg-white border border-violet-100 shadow-lg rounded-xl px-5 py-3 flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
-                <span className="text-sm font-medium text-gray-700">Building your workflow…</span>
-                <span className="text-xs text-gray-400">agents will appear as they&apos;re designed</span>
+      {/* Body — resizable split */}
+      <PanelGroup direction="horizontal" className="flex-1 overflow-hidden">
+        {/* Canvas */}
+        <Panel defaultSize={72} minSize={40}>
+          <div className="relative w-full h-full">
+            <WorkflowCanvas readonly={isExecRunning} />
+            {isStreaming && (
+              <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-end justify-center pb-8 pointer-events-none">
+                <div className="bg-white border border-violet-100 shadow-lg rounded-xl px-5 py-3 flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+                  <span className="text-sm font-medium text-gray-700">Building your workflow…</span>
+                  <span className="text-xs text-gray-400">agents will appear as they&apos;re designed</span>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-        {panel === 'config' && <AgentConfigPanel />}
-        {panel === 'contracts' && id && <ContractEditor workflowId={id} />}
-        {panel === 'execution' && <ExecutionPanel workflowAgents={data?.workflow?.graph_json?.agents as AgentNodeData[] ?? []} />}
-      </div>
+            )}
+            {!isStreaming && !isExecRunning && id && <ChatToolbar workflowId={id} />}
+          </div>
+        </Panel>
+
+        {/* Drag handle — 1px visible line, wider invisible hit area */}
+        <PanelResizeHandle className="w-px bg-gray-200 hover:bg-violet-400 active:bg-violet-500 transition-colors relative after:absolute after:inset-y-0 after:-left-1.5 after:right-[-6px] after:cursor-col-resize" />
+
+        {/* Right sidebar */}
+        <Panel defaultSize={28} minSize={20} maxSize={55}>
+          <div className="h-full overflow-hidden">
+            {panel === 'config' && <AgentConfigPanel />}
+            {panel === 'contracts' && id && <ContractEditor workflowId={id} />}
+            {panel === 'execution' && <ExecutionPanel workflowAgents={data?.workflow?.graph_json?.agents as AgentNodeData[] ?? []} />}
+          </div>
+        </Panel>
+      </PanelGroup>
     </div>
   );
 }

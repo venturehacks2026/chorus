@@ -9,7 +9,6 @@ node_modules/
 .turbo/
 dist/
 tsconfig.tsbuildinfo
-package-lock.json
 
 # Python
 __pycache__/

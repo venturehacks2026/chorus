@@ -3,10 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Play, Save, ArrowLeft, Shield, Settings, Loader2,
-  CheckCircle, XCircle
-} from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import { useExecutionStore } from '@/stores/executionStore';
@@ -17,7 +13,6 @@ import AgentConfigPanel from './workflow/AgentConfigPanel';
 import ContractEditor from './workflow/ContractEditor';
 import ExecutionPanel from './execution/ExecutionPanel';
 
-// Dynamically import ReactFlow to avoid SSR issues
 const WorkflowCanvas = dynamic(() => import('./canvas/WorkflowCanvas'), { ssr: false });
 
 type Panel = 'config' | 'contracts' | 'execution';
@@ -50,10 +45,8 @@ export default function WorkflowEditor() {
     }
   }, [data?.workflow?.id]);
 
-  // Realtime subscription for execution
   useEffect(() => {
     if (!executionId) return;
-
     const ch = supabase.channel(`exec:${executionId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'agent_executions', filter: `execution_id=eq.${executionId}` },
         (p) => {
@@ -63,11 +56,9 @@ export default function WorkflowEditor() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'executions', filter: `id=eq.${executionId}` },
         (p) => { updateExecutionStatus((p.new as Execution).status); })
       .subscribe();
-
     return () => { supabase.removeChannel(ch); };
   }, [executionId]);
 
-  // Auto-switch to execution panel on run
   useEffect(() => {
     if (executionStatus === 'running') setPanel('execution');
   }, [executionStatus]);
@@ -92,15 +83,15 @@ export default function WorkflowEditor() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ workflow_id: id }),
     });
-    const data = await res.json() as { execution_id: string };
-    startExecution(data.execution_id);
+    const json = await res.json() as { execution_id: string };
+    startExecution(json.execution_id);
     setRunning(false);
   }
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-5 h-5 text-text-subtle animate-spin" />
+        <div className="w-4 h-4 border-2 border-border border-t-text-subtle rounded-full animate-spin" />
       </div>
     );
   }
@@ -110,45 +101,40 @@ export default function WorkflowEditor() {
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <header className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-bg-subtle shrink-0">
+      <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border bg-bg shrink-0">
         <button
           onClick={() => router.push('/')}
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-border text-text-subtle hover:text-text transition-colors"
+          className="text-sm text-text-muted hover:text-text transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          Agents
         </button>
-
-        <span className="text-sm font-medium text-text truncate max-w-[200px]">
+        <span className="text-text-subtle text-sm">/</span>
+        <span className="text-sm font-medium text-text truncate max-w-[240px]">
           {data?.workflow?.name}
         </span>
 
         {executionStatus === 'completed' && (
-          <span className="flex items-center gap-1 text-xs text-emerald-400">
-            <CheckCircle className="w-3.5 h-3.5" />Completed
-          </span>
+          <span className="text-xs text-emerald-700 font-medium">Completed</span>
         )}
         {executionStatus === 'failed' && (
-          <span className="flex items-center gap-1 text-xs text-red-400">
-            <XCircle className="w-3.5 h-3.5" />Failed
-          </span>
+          <span className="text-xs text-red-600 font-medium">Failed</span>
         )}
 
         <div className="flex-1" />
 
         {/* Panel toggle */}
-        <div className="flex bg-bg border border-border rounded-lg p-0.5">
-          {([['config', Settings, 'Config'], ['contracts', Shield, 'Contracts'], ['execution', Play, 'Live']] as const).map(([p, Icon, label]) => {
-            if (p === 'execution' && !executionId) return null;
+        <div className="flex bg-bg-muted border border-border rounded-md p-0.5">
+          {(['config', 'contracts', ...(executionId ? ['execution'] : [])] as Panel[]).map((p) => {
+            const label = { config: 'Config', contracts: 'Contracts', execution: 'Live' }[p];
             return (
               <button
                 key={p}
                 onClick={() => setPanel(p)}
                 className={cn(
-                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
-                  panel === p ? 'bg-border text-text' : 'text-text-subtle hover:text-text-muted',
+                  'px-2.5 py-1 rounded text-xs font-medium transition-colors',
+                  panel === p ? 'bg-bg text-text shadow-sm' : 'text-text-muted hover:text-text',
                 )}
               >
-                <Icon className="w-3 h-3" />
                 {label}
               </button>
             );
@@ -158,34 +144,30 @@ export default function WorkflowEditor() {
         <button
           onClick={handleSave}
           disabled={saving || isExecRunning}
-          className="flex items-center gap-1.5 px-3 py-2 bg-bg border border-border hover:bg-border rounded-lg text-xs font-medium transition-colors disabled:opacity-40"
+          className="px-3 py-1.5 bg-bg border border-border hover:bg-bg-muted rounded-md text-xs font-medium transition-colors disabled:opacity-40"
         >
-          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-          Save
+          {saving ? 'Saving...' : 'Save'}
         </button>
 
         <button
           onClick={handleRun}
           disabled={isExecRunning || running}
           className={cn(
-            'flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium transition-all',
+            'px-3.5 py-1.5 rounded-md text-xs font-medium transition-all',
             isExecRunning || running
-              ? 'bg-sand-400/20 text-sand-600 cursor-not-allowed'
+              ? 'bg-bg-muted text-text-muted cursor-not-allowed border border-border'
               : 'bg-sand-400 hover:bg-sand-500 text-sand-900',
           )}
         >
-          {isExecRunning || running
-            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Running</>
-            : <><Play className="w-3.5 h-3.5" />Run</>}
+          {isExecRunning || running ? 'Running...' : 'Run'}
         </button>
-      </header>
+      </div>
 
       {/* Body */}
       <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 relative bg-bg">
+        <div className="flex-1 relative">
           <WorkflowCanvas readonly={isExecRunning} />
         </div>
-
         {panel === 'config' && <AgentConfigPanel />}
         {panel === 'contracts' && id && <ContractEditor workflowId={id} />}
         {panel === 'execution' && <ExecutionPanel />}

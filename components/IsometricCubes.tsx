@@ -5,92 +5,107 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrthographicCamera } from '@react-three/drei';
 import * as THREE from 'three';
 
-/* ── colour palette matching the reference image ─────────────────────── */
-const VIOLET = new THREE.Color('#3b3bbd');
+/* ── palette ─────────────────────────────────────────────────────────────── */
+const C_MAIN   = new THREE.Color('#7c3aed'); // violet-700
+const C_MID    = new THREE.Color('#a78bfa'); // violet-400
+const C_LIGHT  = new THREE.Color('#ddd6fe'); // violet-200
 
-/* ── cube definitions: grid position + max height + phase offset ─────── */
-const CUBES: { x: number; z: number; maxH: number; phase: number }[] = [
-  { x: -1.5, z:  0.5, maxH: 2.4, phase: 0.0  },
-  { x: -0.5, z: -0.5, maxH: 3.8, phase: 0.7  },
-  { x:  0.5, z:  0.0, maxH: 2.0, phase: 1.3  },
-  { x: -1.5, z: -0.5, maxH: 1.6, phase: 0.4  },
-  { x:  0.5, z: -1.0, maxH: 3.0, phase: 1.8  },
-  { x:  1.5, z:  0.0, maxH: 2.6, phase: 0.9  },
-  { x: -0.5, z:  0.5, maxH: 4.4, phase: 0.2  },
-  { x:  1.5, z: -1.0, maxH: 1.4, phase: 2.2  },
-];
+/* ── grid layout: 8×6 towers on a flat isometric plane ──────────────────── */
+const COLS = 8;
+const ROWS = 6;
+const GAP  = 1.05; // spacing between towers
 
-function AnimatedCube({ x, z, maxH, phase }: typeof CUBES[number]) {
+function towerColor(maxH: number): THREE.Color {
+  if (maxH > 3.5) return C_MAIN;
+  if (maxH > 2.0) return C_MID;
+  return C_LIGHT;
+}
+
+function seededRand(seed: number) {
+  const x = Math.sin(seed + 1) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+// Build towers: each has a height profile driven by a wave + individual phase
+const TOWERS = Array.from({ length: COLS * ROWS }, (_, i) => {
+  const col = i % COLS;
+  const row = Math.floor(i / COLS);
+  const r   = seededRand(i * 7.3 + 13.1);
+  const maxH = 0.4 + r * 3.8;
+  // wave group: towers closer to center-front are taller on average
+  const dist = Math.sqrt((col - COLS / 2) ** 2 + (row - ROWS / 2) ** 2);
+  const boost = Math.max(0, 1 - dist / 4) * 1.8;
+  return {
+    x: (col - COLS / 2) * GAP,
+    z: (row - ROWS / 2) * GAP,
+    maxH: Math.min(maxH + boost, 4.8),
+    phase: seededRand(i * 3.7) * Math.PI * 2,
+    waveCol: col,
+    waveRow: row,
+    color: towerColor(maxH + boost),
+  };
+});
+
+function Tower({ x, z, maxH, phase, waveCol, waveRow, color }: typeof TOWERS[number]) {
   const mesh = useRef<THREE.Mesh>(null!);
 
   useFrame(({ clock }) => {
-    const t = clock.getElapsedTime() * 0.55 + phase;
-    // smooth 0→1→0 oscillation, never fully collapses
-    const frac = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t));
-    const h = maxH * frac;
+    const t = clock.getElapsedTime();
+    // diagonal wave sweeping across the grid
+    const wave = Math.sin(t * 0.8 + (waveCol + waveRow) * 0.45 + phase * 0.3);
+    // each tower also has a slow individual oscillation
+    const solo = Math.sin(t * 0.4 + phase);
+    const frac = 0.22 + 0.78 * (0.5 + 0.35 * wave + 0.15 * solo);
+    const h = Math.max(0.08, maxH * frac);
     mesh.current.scale.y = h;
     mesh.current.position.y = h / 2;
   });
 
   return (
-    <mesh ref={mesh} position={[x, 0, z]} castShadow receiveShadow>
-      <boxGeometry args={[0.88, 1, 0.88]} />
-      <meshStandardMaterial
-        color={VIOLET}
-        roughness={0.45}
-        metalness={0.05}
-      />
+    <mesh ref={mesh} position={[x, 0, z]} castShadow>
+      <boxGeometry args={[0.82, 1, 0.82]} />
+      <meshStandardMaterial color={color} roughness={0.4} metalness={0.08} />
     </mesh>
   );
 }
 
-/* ── isometric grid drawn as line segments on the floor ──────────────── */
-function IsoGrid() {
-  const SIZE = 12;
-  const STEP = 1;
+/* ── ground grid ─────────────────────────────────────────────────────────── */
+function GroundGrid() {
+  const SIZE = 9;
   const points: THREE.Vector3[] = [];
-
-  for (let i = -SIZE; i <= SIZE; i += STEP) {
-    points.push(new THREE.Vector3(-SIZE, 0, i), new THREE.Vector3(SIZE, 0, i));
-    points.push(new THREE.Vector3(i, 0, -SIZE), new THREE.Vector3(i, 0, SIZE));
+  for (let i = -SIZE; i <= SIZE; i++) {
+    points.push(new THREE.Vector3(-SIZE, -0.01, i), new THREE.Vector3(SIZE, -0.01, i));
+    points.push(new THREE.Vector3(i, -0.01, -SIZE), new THREE.Vector3(i, -0.01, SIZE));
   }
-
   const geo = new THREE.BufferGeometry().setFromPoints(points);
   return (
     <lineSegments geometry={geo}>
-      <lineBasicMaterial color="#2a2a7a" transparent opacity={0.4} />
+      <lineBasicMaterial color="#ddd6fe" transparent opacity={0.45} />
     </lineSegments>
   );
 }
 
-/* ── scene ────────────────────────────────────────────────────────────── */
+/* ── scene ───────────────────────────────────────────────────────────────── */
 function Scene() {
   return (
     <>
-      {/* isometric orthographic camera */}
       <OrthographicCamera
         makeDefault
-        position={[9, 9, 9]}
-        zoom={72}
+        position={[10, 10, 10]}
+        zoom={58}
         near={0.1}
-        far={200}
+        far={300}
       />
 
-      {/* lighting: top key + front fill (blue-tinted) to shade faces */}
-      <ambientLight intensity={0.25} />
-      <directionalLight
-        position={[6, 12, 4]}
-        intensity={1.1}
-        castShadow
-        shadow-mapSize={[1024, 1024]}
-      />
-      <directionalLight position={[-6, 4, -6]} intensity={0.35} color="#6060ff" />
-      <directionalLight position={[0, -4, 0]}  intensity={0.08} color="#2222aa" />
+      <ambientLight intensity={0.55} />
+      <directionalLight position={[8, 14, 6]}  intensity={1.5} castShadow shadow-mapSize={[1024, 1024]} />
+      <directionalLight position={[-6, 5, -5]} intensity={0.35} color="#a78bfa" />
+      <directionalLight position={[0, -3, 0]}  intensity={0.08} />
 
-      <IsoGrid />
+      <GroundGrid />
 
-      {CUBES.map((c, i) => (
-        <AnimatedCube key={i} {...c} />
+      {TOWERS.map((t, i) => (
+        <Tower key={i} {...t} />
       ))}
     </>
   );

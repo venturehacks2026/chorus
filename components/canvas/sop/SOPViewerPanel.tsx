@@ -49,11 +49,11 @@ export default function SOPViewerPanel({ sopName, sections }: Props) {
   }
 
   return (
-    <div className="absolute top-0 left-0 bottom-0 w-[380px] z-20 flex flex-col bg-panel border-r border-border shadow-lg">
+    <div className="absolute top-0 left-0 bottom-0 w-[380px] z-20 flex flex-col bg-white border-r border-gray-200 shadow-lg">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-bg-subtle">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-bg-subtle">
         <div className="flex items-center gap-2 min-w-0">
-          <FileText className="w-4 h-4 text-sand-600 flex-shrink-0" />
+          <FileText className="w-4 h-4 text-violet-500 flex-shrink-0" />
           <span className="text-sm font-medium text-text truncate">{sopName}</span>
         </div>
         <button
@@ -76,8 +76,8 @@ export default function SOPViewerPanel({ sopName, sections }: Props) {
               onMouseEnter={() => handleSectionHover(section)}
               onMouseLeave={handleSectionLeave}
               className={cn(
-                'px-4 py-3 border-b border-border/50 transition-colors cursor-default',
-                isActive && 'bg-sand-400/10',
+                'px-4 py-3 border-b border-gray-200/50 transition-colors cursor-default',
+                isActive && 'bg-violet-50',
                 !isActive && 'hover:bg-bg-subtle',
               )}
             >
@@ -96,7 +96,7 @@ export default function SOPViewerPanel({ sopName, sections }: Props) {
                 {section.content}
               </p>
               {isActive && section.linkedNodeIds.length > 0 && (
-                <div className="flex items-center gap-1 mt-2 text-[10px] text-sand-600">
+                <div className="flex items-center gap-1 mt-2 text-[10px] text-violet-500">
                   <ChevronRight className="w-3 h-3" />
                   <span>Highlighting {section.linkedNodeIds.length} linked node{section.linkedNodeIds.length > 1 ? 's' : ''}</span>
                 </div>
@@ -107,7 +107,7 @@ export default function SOPViewerPanel({ sopName, sections }: Props) {
       </div>
 
       {/* Footer stats */}
-      <div className="px-4 py-2 border-t border-border bg-bg-subtle flex items-center justify-between text-[10px] text-text-subtle">
+      <div className="px-4 py-2 border-t border-gray-200 bg-bg-subtle flex items-center justify-between text-[10px] text-text-subtle">
         <span>{sections.length} sections</span>
         <span>{linkedSectionIds.size} linked to graph</span>
       </div>

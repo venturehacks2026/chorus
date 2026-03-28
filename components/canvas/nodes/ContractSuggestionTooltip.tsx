@@ -48,11 +48,11 @@ export default function ContractSuggestionTooltip({ data, onCreateContract }: Pr
   };
 
   return (
-    <div className="absolute -top-2 left-full ml-2 z-50 w-56 bg-input border border-input-border rounded-lg shadow-lg p-3 space-y-2">
+    <div className="absolute -top-2 left-full ml-2 z-50 w-56 bg-white border border-gray-200 rounded-xl shadow-lg p-3 space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <Shield className="w-3 h-3 text-sand-600" />
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-text-subtle">Suggested contracts</span>
+          <Shield className="w-3 h-3 text-violet-500" />
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Suggested contracts</span>
         </div>
         <button onClick={() => setDismissed(true)} className="text-text-subtle hover:text-text">
           <X className="w-3 h-3" />
@@ -67,7 +67,7 @@ export default function ContractSuggestionTooltip({ data, onCreateContract }: Pr
           {onCreateContract && (
             <button
               onClick={() => onCreateContract(s.rule, s.ruleType)}
-              className="w-4 h-4 rounded flex items-center justify-center bg-sand-400/20 hover:bg-sand-400/40 text-sand-700 flex-shrink-0 mt-0.5"
+              className="w-4 h-4 rounded flex items-center justify-center bg-violet-50 hover:bg-violet-100 text-violet-600 flex-shrink-0 mt-0.5"
             >
               <Plus className="w-2.5 h-2.5" />
             </button>

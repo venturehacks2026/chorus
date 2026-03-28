@@ -17,21 +17,21 @@ export default function CoverageBar() {
   const pct = total > 0 ? Math.round((automated / total) * 100) : 0;
 
   return (
-    <div className="flex items-center gap-3 px-3 py-1.5 bg-bg-subtle border border-border rounded-md shadow-sm">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-text-subtle">Coverage</span>
-      <div className="w-24 h-1.5 rounded-full bg-sand-200 overflow-hidden">
+    <div className="flex items-center gap-3 px-3 py-1.5 bg-white border border-gray-200 rounded-lg shadow-sm">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Coverage</span>
+      <div className="w-24 h-1.5 rounded-full bg-gray-100 overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{
             width: `${pct}%`,
-            backgroundColor: pct >= 80 ? '#6B8E6B' : pct >= 50 ? '#C49A6C' : '#B86B6B',
+            backgroundColor: pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444',
           }}
         />
       </div>
-      <span className="text-xs font-mono font-medium text-text" style={{ color: pct >= 80 ? '#6B8E6B' : pct >= 50 ? '#C49A6C' : '#B86B6B' }}>
+      <span className="text-xs font-mono font-semibold" style={{ color: pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444' }}>
         {pct}%
       </span>
-      <span className="text-[10px] text-text-subtle">
+      <span className="text-[10px] text-gray-400">
         {automated}/{total} automated
       </span>
     </div>

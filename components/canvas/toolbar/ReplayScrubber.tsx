@@ -69,7 +69,7 @@ export default function ReplayScrubber({ events }: Props) {
     return (
       <button
         onClick={() => setReplayMode(true)}
-        className="flex items-center gap-1.5 px-3 py-1.5 bg-bg-subtle border border-border rounded-md text-xs font-medium text-text-muted hover:text-text transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors"
       >
         <RotateCcw className="w-3 h-3" />
         Replay
@@ -81,33 +81,33 @@ export default function ReplayScrubber({ events }: Props) {
   const progress = events.length > 1 ? (replayIndex / (events.length - 1)) * 100 : 0;
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2 bg-bg-subtle border border-border rounded-lg shadow-sm min-w-[480px]">
+    <div className="flex items-center gap-3 px-4 py-2 bg-white border border-gray-200 rounded-xl shadow-sm min-w-[480px]">
       {/* Controls */}
       <div className="flex items-center gap-1">
-        <button onClick={() => setReplayIndex(0)} className="w-6 h-6 flex items-center justify-center rounded hover:bg-sand-200 text-text-muted">
+        <button onClick={() => setReplayIndex(0)} className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400">
           <SkipBack className="w-3 h-3" />
         </button>
         <button
           onClick={() => setReplayPlaying(!replayPlaying)}
-          className="w-7 h-7 flex items-center justify-center rounded-md bg-sand-400 text-sand-900 hover:bg-sand-500"
+          className="w-7 h-7 flex items-center justify-center rounded-md bg-violet-600 text-white hover:bg-violet-700"
         >
           {replayPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
         </button>
-        <button onClick={() => setReplayIndex(Math.min(events.length - 1, replayIndex + 1))} className="w-6 h-6 flex items-center justify-center rounded hover:bg-sand-200 text-text-muted">
+        <button onClick={() => setReplayIndex(Math.min(events.length - 1, replayIndex + 1))} className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400">
           <SkipForward className="w-3 h-3" />
         </button>
       </div>
 
       {/* Timeline bar */}
       <div className="flex-1 relative">
-        <div className="h-1.5 rounded-full bg-sand-200 overflow-hidden cursor-pointer"
+        <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden cursor-pointer"
           onClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             const pct = (e.clientX - rect.left) / rect.width;
             setReplayIndex(Math.round(pct * (events.length - 1)));
           }}
         >
-          <div className="h-full rounded-full bg-sand-400 transition-all duration-150" style={{ width: `${progress}%` }} />
+          <div className="h-full rounded-full bg-violet-500 transition-all duration-150" style={{ width: `${progress}%` }} />
         </div>
         {/* Step markers */}
         <div className="flex justify-between mt-0.5">
@@ -117,8 +117,8 @@ export default function ReplayScrubber({ events }: Props) {
               onClick={() => setReplayIndex(i)}
               className={cn(
                 'w-1.5 h-1.5 rounded-full transition-all',
-                i <= replayIndex ? 'bg-sand-400' : 'bg-sand-200',
-                i === replayIndex && 'w-2 h-2 bg-sand-500 ring-2 ring-sand-400/30',
+                i <= replayIndex ? 'bg-violet-500' : 'bg-gray-100',
+                i === replayIndex && 'w-2 h-2 bg-violet-600 ring-2 ring-violet-400/30',
               )}
             />
           ))}
@@ -127,15 +127,15 @@ export default function ReplayScrubber({ events }: Props) {
 
       {/* Current event label */}
       <div className="min-w-[120px] text-right">
-        <p className="text-[10px] font-mono text-text-subtle">{replayIndex + 1}/{events.length}</p>
-        <p className="text-xs text-text truncate">{currentEvent?.label ?? '—'}</p>
+        <p className="text-[10px] font-mono text-gray-400">{replayIndex + 1}/{events.length}</p>
+        <p className="text-xs text-gray-900 truncate">{currentEvent?.label ?? '—'}</p>
       </div>
 
       {/* Speed control */}
       <select
         value={replaySpeed}
         onChange={(e) => setReplaySpeed(Number(e.target.value))}
-        className="text-[10px] bg-bg border border-border rounded px-1.5 py-0.5 text-text-muted"
+        className="text-[10px] bg-white border border-gray-200 rounded px-1.5 py-0.5 text-gray-500"
       >
         <option value={0.5}>0.5x</option>
         <option value={1}>1x</option>
@@ -146,7 +146,7 @@ export default function ReplayScrubber({ events }: Props) {
       {/* Exit */}
       <button
         onClick={() => setReplayMode(false)}
-        className="text-[10px] text-text-subtle hover:text-text"
+        className="text-[10px] text-gray-400 hover:text-gray-900"
       >
         Exit
       </button>

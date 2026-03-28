@@ -33,6 +33,15 @@ const config: Config = {
           light:   '#8b5cf6',
           muted:   '#f5f3ff',
         },
+        input: {
+          DEFAULT: '#FAF6F1',
+          border: '#C4B5A5',
+          focus: '#A68B6B',
+          placeholder: '#B8A090',
+        },
+        panel: {
+          DEFAULT: '#F0E6DA',
+        },
       },
     },
   },

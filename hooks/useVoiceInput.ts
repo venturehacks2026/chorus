@@ -10,18 +10,24 @@ interface UseVoiceInputOptions {
   lang?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyRecognition = any;
+
+function getSpeechRecognition(): (new () => AnyRecognition) | null {
+  if (typeof window === 'undefined') return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const w = window as any;
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+
 export function useVoiceInput({ onTranscript, onInterimTranscript, lang = 'en-US' }: UseVoiceInputOptions) {
   const [state, setState] = useState<VoiceState>('idle');
   const [error, setError] = useState<string | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<AnyRecognition>(null);
   const stoppedManuallyRef = useRef(false);
 
   useEffect(() => {
-    const SpeechRecognition =
-      (typeof window !== 'undefined') &&
-      (window.SpeechRecognition ?? (window as unknown as { webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition);
-
-    if (!SpeechRecognition) {
+    if (!getSpeechRecognition()) {
       setState('unsupported');
     }
     return () => {
@@ -32,16 +38,12 @@ export function useVoiceInput({ onTranscript, onInterimTranscript, lang = 'en-US
   const start = useCallback(() => {
     if (state === 'unsupported') return;
     if (state === 'listening') {
-      // Stop manually
       stoppedManuallyRef.current = true;
       recognitionRef.current?.stop();
       return;
     }
 
-    const SpeechRecognition =
-      window.SpeechRecognition ??
-      (window as unknown as { webkitSpeechRecognition?: typeof window.SpeechRecognition }).webkitSpeechRecognition;
-
+    const SpeechRecognition = getSpeechRecognition();
     if (!SpeechRecognition) { setState('unsupported'); return; }
 
     setError(null);
@@ -57,7 +59,7 @@ export function useVoiceInput({ onTranscript, onInterimTranscript, lang = 'en-US
 
     rec.onstart = () => setState('listening');
 
-    rec.onresult = (event: SpeechRecognitionEvent) => {
+    rec.onresult = (event: AnyRecognition) => {
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
@@ -70,7 +72,7 @@ export function useVoiceInput({ onTranscript, onInterimTranscript, lang = 'en-US
       onInterimTranscript?.(interim);
     };
 
-    rec.onerror = (event: SpeechRecognitionErrorEvent) => {
+    rec.onerror = (event: AnyRecognition) => {
       if (event.error === 'no-speech' || event.error === 'aborted') return;
       setError(event.error === 'not-allowed'
         ? 'Microphone access denied. Allow it in your browser settings.'

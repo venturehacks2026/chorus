@@ -128,7 +128,7 @@ export default function ASDDetailModal({ asdId, onClose }: Props) {
   const graphData = useMemo(() => {
     if (rawNodes.length === 0) return { nodes: [], edges: [] };
     const { nodes: rfNodes, edges: rfEdges } = mapASDToFlowGraph(rawNodes, rawEdges);
-    return layoutNodes(rfNodes, rfEdges, 'LR');
+    return layoutNodes(rfNodes, rfEdges, 'TB');
   }, [rawNodes, rawEdges, layoutNodes]);
 
   // ── Selected node detail ──

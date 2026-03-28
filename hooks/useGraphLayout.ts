@@ -3,27 +3,28 @@ import dagre from '@dagrejs/dagre';
 import type { Node, Edge } from '@xyflow/react';
 
 const NODE_DIMENSIONS: Record<string, { width: number; height: number }> = {
-  start: { width: 160, height: 48 },
-  end: { width: 160, height: 48 },
-  action: { width: 240, height: 80 },
-  decision: { width: 200, height: 100 },
-  handoff: { width: 240, height: 96 },
-  wait: { width: 200, height: 72 },
-  error: { width: 200, height: 72 },
-  skill: { width: 220, height: 88 },
-  agent: { width: 240, height: 80 },
+  start: { width: 180, height: 52 },
+  end: { width: 180, height: 52 },
+  action: { width: 280, height: 80 },
+  decision: { width: 260, height: 100 },
+  handoff: { width: 280, height: 96 },
+  wait: { width: 260, height: 80 },
+  error: { width: 260, height: 80 },
+  skill: { width: 260, height: 88 },
+  agent: { width: 280, height: 80 },
 };
 
-const DEFAULT_DIM = { width: 220, height: 80 };
+const DEFAULT_DIM = { width: 260, height: 80 };
 
 export function useGraphLayout() {
   const layoutNodes = useCallback(
     (nodes: Node[], edges: Edge[], direction: 'LR' | 'TB' = 'LR'): { nodes: Node[]; edges: Edge[] } => {
       const g = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
+      const isTB = direction === 'TB';
       g.setGraph({
         rankdir: direction,
-        nodesep: 60,
-        ranksep: 100,
+        nodesep: isTB ? 50 : 60,
+        ranksep: isTB ? 70 : 100,
         edgesep: 20,
         marginx: 40,
         marginy: 40,

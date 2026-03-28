@@ -18,12 +18,7 @@ def compile_sop_to_asd(sop: dict, skill_id: str | None = None) -> dict:
     sop_text = sop["raw_text"]
     content_hash = sop["content_hash"]
 
-    # Generate skill_id if not provided
-    if not skill_id:
-        title_slug = re.sub(r"[^a-z0-9]+", "_", sop["title"].lower()).strip("_")
-        skill_id = f"{title_slug}_v1"
-
-    # Check if ASD already exists for this SOP
+    # Check if ASD already exists for this SOP (recompile case)
     existing = db.table("agent_skill_documents").select("*").eq("sop_id", sop_id).execute()
 
     if existing.data:
@@ -34,6 +29,20 @@ def compile_sop_to_asd(sop: dict, skill_id: str | None = None) -> dict:
     else:
         asd_id = str(uuid.uuid4())
         new_version = 1
+
+        # Generate skill_id if not provided, ensuring uniqueness
+        if not skill_id:
+            title_slug = re.sub(r"[^a-z0-9]+", "_", sop["title"].lower()).strip("_")
+            base_skill_id = f"{title_slug}_v1"
+            skill_id = base_skill_id
+
+            # Check for skill_id collision and append suffix if needed
+            collision = db.table("agent_skill_documents").select("id").eq("skill_id", skill_id).execute()
+            suffix = 2
+            while collision.data:
+                skill_id = f"{base_skill_id}_{suffix}"
+                collision = db.table("agent_skill_documents").select("id").eq("skill_id", skill_id).execute()
+                suffix += 1
 
     # Get chunk metadata for structural hints
     chunks_result = (

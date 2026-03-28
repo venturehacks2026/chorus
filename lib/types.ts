@@ -178,6 +178,7 @@ export interface BaseNodeData {
   executionState?: ExecutionNodeState;
   hasComplianceLanguage?: boolean;
   suggestedContracts?: Array<{ rule: string; ruleType: 'must_always' | 'must_never' | 'must_escalate' }>;
+  layoutDirection?: 'LR' | 'TB';
 }
 
 export interface ActionNodeData extends BaseNodeData {

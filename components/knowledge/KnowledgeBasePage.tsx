@@ -86,9 +86,12 @@ export default function KnowledgeBasePage() {
   });
 
   const deleteSop = useMutation({
-    mutationFn: (sopId: string) =>
-      fetch(`/api/knowledge/sops/${sopId}`, { method: 'DELETE' }).then(r => r.json()),
-    onSuccess: () => {
+    mutationFn: async (sopId: string) => {
+      const res = await fetch(`/api/knowledge/sops/${sopId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+      return res.json();
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['sops'] });
       qc.invalidateQueries({ queryKey: ['asds'] });
       setDeletingSopId(null);

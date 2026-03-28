@@ -32,14 +32,20 @@ const EDGE_TYPE_MAP: Record<string, string> = {
   error_handler: 'error',
 };
 
+function truncate(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+  return text.slice(0, maxLen - 1) + '…';
+}
+
 function buildBaseData(node: ASDNode, nodeType: ASDNodeType): BaseNodeData {
   return {
     label: node.node_id,
-    description: node.description ?? '',
+    description: truncate(node.description ?? '', 50),
     nodeType,
     confidenceScore: node.confidence_score ?? 1,
     status: node.needs_clarification ? 'needs_clarification' : 'complete',
     contracts: [],
+    layoutDirection: 'TB',
   };
 }
 
@@ -57,7 +63,7 @@ function buildDecisionData(
   return {
     ...buildBaseData(node, 'decision'),
     nodeType: 'decision',
-    condition: node.description ?? '',
+    condition: truncate(node.description ?? '', 50),
     conditionExpression: '',
     trueBranchLabel: trueEdge?.condition_label ?? 'Yes',
     falseBranchLabel: falseEdge?.condition_label ?? 'No',

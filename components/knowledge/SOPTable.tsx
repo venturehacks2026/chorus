@@ -97,7 +97,7 @@ export default function SOPTable({ sops, asds, compilingSopIds, onCompile, onVie
                     ) : (
                       <button
                         onClick={() => onCompile(sop.id)}
-                        className="text-xs font-medium px-3 py-1 rounded-md transition-colors text-violet-600 hover:text-violet-700 hover:bg-violet-50"
+                        className="text-xs font-medium px-3 py-1 rounded-md transition-colors bg-violet-600 text-white hover:bg-violet-700"
                       >
                         Compile
                       </button>

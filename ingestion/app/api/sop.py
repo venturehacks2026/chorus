@@ -161,7 +161,37 @@ async def delete_sop(sop_id: str):
     result = db.table("sop_documents").select("id").eq("id", sop_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="SOP not found")
+
+    # Find associated ASDs to cascade-delete their children
+    asds = db.table("agent_skill_documents").select("id").eq("sop_id", sop_id).execute()
+    for asd in (asds.data or []):
+        asd_id = asd["id"]
+
+        # Delete contracts for this ASD
+        db.table("derived_contracts").delete().eq("asd_id", asd_id).execute()
+
+        # Delete clarification requests for this ASD
+        db.table("clarification_requests").delete().eq("asd_id", asd_id).execute()
+
+        # Delete nodes and edges for all versions of this ASD
+        versions = db.table("asd_versions").select("id").eq("asd_id", asd_id).execute()
+        for ver in (versions.data or []):
+            vid = ver["id"]
+            db.table("asd_nodes").delete().eq("asd_version_id", vid).execute()
+            db.table("asd_edges").delete().eq("asd_version_id", vid).execute()
+
+        # Delete versions
+        db.table("asd_versions").delete().eq("asd_id", asd_id).execute()
+
+    # Delete ASDs
+    db.table("agent_skill_documents").delete().eq("sop_id", sop_id).execute()
+
+    # Delete document chunks
+    db.table("document_chunks").delete().eq("sop_id", sop_id).execute()
+
+    # Delete the SOP itself
     db.table("sop_documents").delete().eq("id", sop_id).execute()
+
     return {"deleted": True, "sop_id": sop_id}
 
 

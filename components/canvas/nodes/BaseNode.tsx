@@ -76,7 +76,7 @@ export default function BaseNode({ nodeType, color, icon, selected, data, childr
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={cn(
-        'relative bg-white border-2 min-w-[180px] px-4 py-3 shadow-sm transition-all duration-200 cursor-pointer select-none',
+        'relative bg-white border-2 min-w-[220px] max-w-[320px] px-4 py-3 shadow-sm transition-all duration-200 cursor-pointer select-none',
         SHAPE_CLASSES[shape],
         selected ? 'ring-2 ring-violet-500/25 shadow-md' : 'hover:shadow-md',
         data.executionState?.phase === 'active' && 'ring-2 ring-blue-400 animate-pulse',
@@ -95,17 +95,17 @@ export default function BaseNode({ nodeType, color, icon, selected, data, childr
       <ContractBadge contracts={data.contracts ?? []} />
       <StatusBadge status={data.status} />
 
-      <Handle type="target" position={Position.Left} className="!w-2.5 !h-2.5 !bg-violet-500 !border-white !border-2" />
-      <Handle type="source" position={Position.Right} className="!w-2.5 !h-2.5 !bg-violet-500 !border-white !border-2" />
+      <Handle type="target" position={data.layoutDirection === 'TB' ? Position.Top : Position.Left} className="!w-2.5 !h-2.5 !bg-violet-500 !border-white !border-2" />
+      <Handle type="source" position={data.layoutDirection === 'TB' ? Position.Bottom : Position.Right} className="!w-2.5 !h-2.5 !bg-violet-500 !border-white !border-2" />
 
       <div className="flex items-start gap-2.5">
         <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${color}15` }}>
           <span style={{ color }}>{icon}</span>
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900 truncate">{data.label}</p>
+          <p className="text-base font-semibold text-gray-900 truncate">{data.label}</p>
           {data.description && shape !== 'pill' && shape !== 'diamond' && (
-            <p className="text-xs text-gray-400 mt-0.5 truncate">{data.description}</p>
+            <p className="text-sm text-gray-400 mt-0.5 truncate">{data.description}</p>
           )}
           {children}
         </div>

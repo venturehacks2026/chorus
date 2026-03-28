@@ -46,10 +46,10 @@ function FlowInner({ nodes, edges, onNodeClick }: Props) {
         panOnDrag
         zoomOnScroll
         fitView
-        fitViewOptions={{ padding: 0.3 }}
+        fitViewOptions={{ padding: 0.15, minZoom: 0.8, maxZoom: 1 }}
         proOptions={{ hideAttribution: true }}
-        minZoom={0.2}
-        maxZoom={2}
+        minZoom={0.3}
+        maxZoom={1.5}
       >
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#e5e7eb" />
         <Controls

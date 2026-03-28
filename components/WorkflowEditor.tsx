@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { useWorkflowStore } from '@/stores/workflowStore';
@@ -20,7 +21,6 @@ type Panel = 'config' | 'contracts' | 'execution';
 export default function WorkflowEditor() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
-  const router = useRouter();
   const loadGraph = useWorkflowStore((s) => s.loadGraph);
   const toWorkflowGraph = useWorkflowStore((s) => s.toWorkflowGraph);
   const workflowId = useWorkflowStore((s) => s.workflowId);
@@ -102,12 +102,9 @@ export default function WorkflowEditor() {
     <div className="flex flex-col h-full">
       {/* Toolbar */}
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border bg-bg shrink-0">
-        <button
-          onClick={() => router.push('/')}
-          className="text-sm text-text-muted hover:text-text transition-colors"
-        >
+        <Link href="/" className="text-sm text-text-muted hover:text-text transition-colors">
           Agents
-        </button>
+        </Link>
         <span className="text-text-subtle text-sm">/</span>
         <span className="text-sm font-medium text-text truncate max-w-[240px]">
           {data?.workflow?.name}

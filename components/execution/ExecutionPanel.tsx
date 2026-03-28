@@ -135,7 +135,13 @@ export default function ExecutionPanel() {
     return () => { supabase.removeChannel(ch); };
   }, [agentExecId, executionId]);
 
-  if (!selectedAgentId || !agent) return null;
+  if (!selectedAgentId || !agent) {
+    return (
+      <div className="w-80 h-full bg-bg-subtle border-l border-border flex items-center justify-center text-xs text-text-subtle px-6 text-center">
+        Click an agent node to see its live execution steps
+      </div>
+    );
+  }
 
   const statusRingClass = { running: 'bg-blue-500/15', completed: 'bg-emerald-500/15', failed: 'bg-red-500/15', idle: 'bg-accent-muted', skipped: 'bg-bg' }[status];
   const statusIconColor = { running: 'text-blue-400', completed: 'text-emerald-400', failed: 'text-red-400', idle: 'text-accent', skipped: 'text-text-subtle' }[status];

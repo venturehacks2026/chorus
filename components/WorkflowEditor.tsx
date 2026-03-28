@@ -49,10 +49,7 @@ export default function WorkflowEditor() {
     if (!executionId) return;
     const ch = supabase.channel(`exec:${executionId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'agent_executions', filter: `execution_id=eq.${executionId}` },
-        (p) => {
-          const row = p.new as AgentExecution;
-          updateAgentStatus(row.agent_id, row.status, row.id);
-        })
+        (p) => { const row = p.new as AgentExecution; updateAgentStatus(row.agent_id, row.status, row.id); })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'executions', filter: `id=eq.${executionId}` },
         (p) => { updateExecutionStatus((p.new as Execution).status); })
       .subscribe();
@@ -90,8 +87,8 @@ export default function WorkflowEditor() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="w-4 h-4 border-2 border-border border-t-text-subtle rounded-full animate-spin" />
+      <div className="flex items-center justify-center h-full bg-white">
+        <div className="w-4 h-4 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
       </div>
     );
   }
@@ -99,28 +96,28 @@ export default function WorkflowEditor() {
   const isExecRunning = executionStatus === 'running';
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-white">
       {/* Toolbar */}
-      <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border bg-bg shrink-0">
-        <Link href="/" className="text-sm text-text-muted hover:text-text transition-colors">
+      <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 bg-white shrink-0">
+        <Link href="/" className="text-sm text-gray-400 hover:text-gray-700 transition-colors">
           Agents
         </Link>
-        <span className="text-text-subtle text-sm">/</span>
-        <span className="text-sm font-medium text-text truncate max-w-[240px]">
+        <span className="text-gray-300 text-sm">/</span>
+        <span className="text-sm font-medium text-gray-900 truncate max-w-[240px]">
           {data?.workflow?.name}
         </span>
 
         {executionStatus === 'completed' && (
-          <span className="text-xs text-emerald-700 font-medium">Completed</span>
+          <span className="text-xs text-emerald-600 font-medium">Completed</span>
         )}
         {executionStatus === 'failed' && (
-          <span className="text-xs text-red-600 font-medium">Failed</span>
+          <span className="text-xs text-red-500 font-medium">Failed</span>
         )}
 
         <div className="flex-1" />
 
         {/* Panel toggle */}
-        <div className="flex bg-bg-muted border border-border rounded-md p-0.5">
+        <div className="flex bg-gray-100 border border-gray-200 rounded-lg p-0.5">
           {(['config', 'contracts', ...(executionId ? ['execution'] : [])] as Panel[]).map((p) => {
             const label = { config: 'Config', contracts: 'Contracts', execution: 'Live' }[p];
             return (
@@ -128,8 +125,10 @@ export default function WorkflowEditor() {
                 key={p}
                 onClick={() => setPanel(p)}
                 className={cn(
-                  'px-2.5 py-1 rounded text-xs font-medium transition-colors',
-                  panel === p ? 'bg-bg text-text shadow-sm' : 'text-text-muted hover:text-text',
+                  'px-3 py-1 rounded-md text-xs font-medium transition-all',
+                  panel === p
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700',
                 )}
               >
                 {label}
@@ -141,22 +140,22 @@ export default function WorkflowEditor() {
         <button
           onClick={handleSave}
           disabled={saving || isExecRunning}
-          className="px-3 py-1.5 bg-bg border border-border hover:bg-bg-muted rounded-md text-xs font-medium transition-colors disabled:opacity-40"
+          className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg text-xs font-medium text-gray-700 transition-colors disabled:opacity-40"
         >
-          {saving ? 'Saving...' : 'Save'}
+          {saving ? 'Saving…' : 'Save'}
         </button>
 
         <button
           onClick={handleRun}
           disabled={isExecRunning || running}
           className={cn(
-            'px-3.5 py-1.5 rounded-md text-xs font-medium transition-all',
+            'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
             isExecRunning || running
-              ? 'bg-bg-muted text-text-muted cursor-not-allowed border border-border'
-              : 'bg-accent hover:bg-accent-hover text-white',
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-violet-600 hover:bg-violet-700 text-white shadow-sm',
           )}
         >
-          {isExecRunning || running ? 'Running...' : 'Run'}
+          {isExecRunning || running ? 'Running…' : 'Run'}
         </button>
       </div>
 

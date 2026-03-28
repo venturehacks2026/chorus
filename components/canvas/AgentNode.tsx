@@ -26,11 +26,11 @@ export const AgentNode = memo(function AgentNode({ data: raw, selected }: NodePr
   }
 
   const borderClass = {
-    running:   'border-blue-400',
-    completed: 'border-emerald-500',
-    failed:    'border-red-400',
-    idle:      'border-border',
-    skipped:   'border-border',
+    running:   'border-blue-300',
+    completed: 'border-emerald-400',
+    failed:    'border-red-300',
+    idle:      'border-gray-200',
+    skipped:   'border-gray-100',
   }[status];
 
   const statusLabel = {
@@ -53,27 +53,27 @@ export const AgentNode = memo(function AgentNode({ data: raw, selected }: NodePr
     <div
       onClick={handleClick}
       className={cn(
-        'relative bg-bg border-2 rounded-xl px-4 py-3 min-w-[200px] cursor-pointer select-none shadow-sm',
-        'transition-all duration-150',
+        'relative bg-white border-2 rounded-xl px-4 py-3 min-w-[200px] cursor-pointer select-none',
+        'shadow-sm transition-all duration-150',
         borderClass,
         status === 'running' && 'shadow-blue-100 shadow-md',
-        (selected || isActiveExec) && 'ring-2 ring-accent/30 shadow-glow-sm',
+        (selected || isActiveExec) && 'ring-2 ring-violet-500/25 border-violet-300',
       )}
     >
       {status === 'running' && (
-        <span className="absolute inset-0 rounded-xl border-2 border-blue-400/40 animate-pulse pointer-events-none" />
+        <span className="absolute inset-0 rounded-xl border-2 border-blue-300/50 animate-pulse pointer-events-none" />
       )}
 
-      <Handle type="target" position={Position.Left} className="!w-2.5 !h-2.5 !bg-accent !border-bg" />
-      <Handle type="source" position={Position.Right} className="!w-2.5 !h-2.5 !bg-accent !border-bg" />
+      <Handle type="target" position={Position.Left} className="!w-2.5 !h-2.5 !bg-violet-500 !border-white !border-2" />
+      <Handle type="source" position={Position.Right} className="!w-2.5 !h-2.5 !bg-violet-500 !border-white !border-2" />
 
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-text truncate">{data.name}</p>
-          <p className="text-xs text-text-subtle mt-0.5 truncate">{data.role}</p>
+          <p className="text-sm font-semibold text-gray-900 truncate">{data.name}</p>
+          <p className="text-xs text-gray-400 mt-0.5 truncate">{data.role}</p>
         </div>
         {statusLabel && (
-          <span className={cn('text-[11px] font-semibold shrink-0', statusColor)}>
+          <span className={cn('text-[11px] font-semibold shrink-0 mt-0.5', statusColor)}>
             {statusLabel}
           </span>
         )}
@@ -82,7 +82,7 @@ export const AgentNode = memo(function AgentNode({ data: raw, selected }: NodePr
       {data.tools.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2.5">
           {data.tools.map((t) => (
-            <span key={t.id} className="text-[10px] px-1.5 py-0.5 rounded-md bg-accent-muted text-accent font-mono">
+            <span key={t.id} className="text-[10px] px-1.5 py-0.5 rounded-md bg-violet-50 border border-violet-100 text-violet-600 font-mono">
               {t.connector_id}
             </span>
           ))}

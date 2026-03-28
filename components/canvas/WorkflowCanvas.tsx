@@ -31,7 +31,7 @@ export default function WorkflowCanvas({ readonly = false }: { readonly?: boolea
   );
 
   return (
-    <div className="w-full h-full bg-bg">
+    <div className="w-full h-full bg-gray-50">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -44,7 +44,7 @@ export default function WorkflowCanvas({ readonly = false }: { readonly?: boolea
         nodesDraggable={!readonly}
         nodesConnectable={!readonly}
         proOptions={{ hideAttribution: true }}
-        className="bg-bg"
+        className="bg-gray-50"
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e5e7eb" />
         <Controls />

@@ -170,8 +170,8 @@ export default function WorkflowEditor() {
           className={cn(
             'flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium transition-all',
             isExecRunning || running
-              ? 'bg-accent/20 text-accent cursor-not-allowed'
-              : 'bg-accent hover:bg-accent-hover text-white',
+              ? 'bg-sand-400/20 text-sand-600 cursor-not-allowed'
+              : 'bg-sand-400 hover:bg-sand-500 text-sand-900',
           )}
         >
           {isExecRunning || running

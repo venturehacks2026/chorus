@@ -26,7 +26,7 @@ export default function WorkflowCanvas({ readonly = false }: { readonly?: boolea
 
   const onConnect = useCallback(
     (connection: Connection) =>
-      setEdges(addEdge({ ...connection, type: 'smoothstep', style: { stroke: '#27272A', strokeWidth: 1.5 } }, edges)),
+      setEdges(addEdge({ ...connection, type: 'smoothstep', style: { stroke: '#D6CCC2', strokeWidth: 1.5 } }, edges)),
     [edges, setEdges],
   );
 
@@ -46,9 +46,9 @@ export default function WorkflowCanvas({ readonly = false }: { readonly?: boolea
         proOptions={{ hideAttribution: true }}
         className="bg-bg"
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#27272A" />
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#D6CCC2" />
         <Controls />
-        <MiniMap nodeColor="#27272A" maskColor="rgba(9,9,11,0.8)" />
+        <MiniMap nodeColor="#D5BDAF" maskColor="rgba(237,237,233,0.7)" />
       </ReactFlow>
     </div>
   );

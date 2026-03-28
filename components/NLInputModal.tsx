@@ -109,7 +109,7 @@ export default function NLInputModal({ open, onClose, onSubmit, loading, error }
             disabled={loading || !name.trim() || !prompt.trim()}
             className={cn(
               'w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all',
-              'bg-accent hover:bg-accent-hover text-white',
+              'bg-sand-400 hover:bg-sand-500 text-sand-900',
               'disabled:opacity-40 disabled:cursor-not-allowed',
             )}
           >

@@ -13,24 +13,36 @@ const config: Config = {
         mono: ['var(--font-geist-mono)', 'JetBrains Mono', 'monospace'],
       },
       colors: {
+        sand: {
+          50: '#F5EBE0',   // cream — inputs, modals, elevated surfaces
+          100: '#EDEDE9',   // warm gray — page background
+          200: '#E3D5CA',   // light sand — cards, panels (tertiary)
+          300: '#D6CCC2',   // warm stone — borders, hover (secondary)
+          400: '#D5BDAF',   // rosy taupe — accent, buttons (primary)
+          500: '#C4A98E',   // deeper taupe — active/pressed states
+          600: '#A68B6B',   // dark taupe — strong text accents
+          700: '#7C6854',   // earth — headings, high-contrast text
+          800: '#5C4D3C',   // deep earth — primary text
+          900: '#3D3228',   // near-black — max contrast text
+        },
         bg: {
-          DEFAULT: '#09090B',
-          subtle: '#111113',
-          muted: '#18181B',
+          DEFAULT: '#EDEDE9',
+          subtle: '#F5EBE0',
+          muted: '#E3D5CA',
         },
         border: {
-          DEFAULT: '#27272A',
-          subtle: '#1F1F22',
+          DEFAULT: '#D6CCC2',
+          subtle: '#E3D5CA',
         },
         text: {
-          DEFAULT: '#FAFAFA',
-          muted: '#A1A1AA',
-          subtle: '#71717A',
+          DEFAULT: '#3D3228',
+          muted: '#7C6854',
+          subtle: '#A68B6B',
         },
         accent: {
-          DEFAULT: '#6366F1',
-          hover: '#818CF8',
-          muted: 'rgba(99,102,241,0.15)',
+          DEFAULT: '#D5BDAF',
+          hover: '#C4A98E',
+          muted: 'rgba(213,189,175,0.20)',
         },
       },
       animation: {

@@ -51,9 +51,26 @@
 
 ## 2. Design Direction
 
-### Aesthetic: **Operational Precision**
+### Aesthetic: **Warm Precision**
 
-Not a toy. Not a marketing page. This is a **control surface** for governing AI agent behavior. The design language should feel like a **mission control dashboard** crossed with a **legal compliance tool** — authoritative, calm under pressure, information-dense but never cluttered.
+Not a toy. Not a marketing page. This is a **control surface** for governing AI agent
+behavior. The design language should feel like a **well-crafted instrument** — calm,
+warm, and readable for hours. The sand palette creates a sense of organic trust and
+approachability without sacrificing professionalism.
+
+### Palette
+
+Five base hexes: `#EDEDE9` `#D6CCC2` `#F5EBE0` `#E3D5CA` `#D5BDAF`
+
+| Role | Hex | Token | Usage |
+|------|-----|-------|-------|
+| **Primary** | `#D5BDAF` | `sand-400` | Buttons, active states, accent borders, selection rings |
+| **Secondary** | `#D6CCC2` | `sand-300` | Borders, hover backgrounds, edge strokes, grid dots |
+| **Tertiary** | `#E3D5CA` | `sand-200` | Card backgrounds, panels, surface elevation |
+| **Background** | `#EDEDE9` | `sand-100` | Page background, canvas |
+| **Surface** | `#F5EBE0` | `sand-50` | Inputs, modals, elevated surfaces, node backgrounds |
+
+Text uses warm earth tones: `#3D3228` (primary), `#7C6854` (muted), `#A68B6B` (subtle).
 
 ### Design Pillars
 
@@ -63,7 +80,7 @@ Not a toy. Not a marketing page. This is a **control surface** for governing AI 
 | **Type-driven hierarchy** | Node types are instantly distinguishable by shape + color + icon — no need to read labels to identify intent. |
 | **State is visible** | Active execution, violations, drift, stuck states — all surfaced through color, animation, and badges without requiring interaction. |
 | **Density with breathing room** | Complex SOPs may have 30-80 nodes. The graph must handle density without visual collapse. Generous edge spacing, clear label hierarchy. |
-| **Dark-first, light-available** | Dark mode primary (operators monitor this for hours). Light mode as secondary option. |
+| **Warm and sustained** | Light sand palette is easy on the eyes for extended monitoring. Operators and compliance officers use this for hours. |
 
 ### Reference Patterns Extracted from Yumi
 
@@ -720,12 +737,15 @@ components/graph/
 
 ## 9. Layout Strategy
 
-### Primary: Dagre (Top-to-Bottom DAG)
+### Primary: Dagre (Left-to-Right Flow)
+
+The graph flows **left to right** — matching the mental model of a pipeline:
+Input → Agent Processing → Skills → Output. This is a core UX decision.
 
 ```typescript
 // Layout configuration
 const LAYOUT_CONFIG = {
-  rankdir: 'TB',           // Top-to-bottom flow direction
+  rankdir: 'LR',           // LEFT-TO-RIGHT flow direction
   nodesep: 60,             // Horizontal spacing between nodes
   ranksep: 100,            // Vertical spacing between ranks
   edgesep: 20,             // Edge spacing
@@ -763,63 +783,63 @@ const NODE_DIMENSIONS: Record<string, { width: number; height: number }> = {
 
 ## 10. Styling Specification
 
-### 10.1 CSS Variables (Dark Mode Primary)
+### 10.1 CSS Variables — Sand Palette
+
+The design uses a warm, light sand palette inspired by natural earth tones.
+Five base hexes: `#EDEDE9`, `#D6CCC2`, `#F5EBE0`, `#E3D5CA`, `#D5BDAF`.
 
 ```css
 :root {
   /* Canvas */
-  --graph-bg: #0a0a0f;
-  --graph-grid-color: rgba(255, 255, 255, 0.03);
-  --graph-selection-bg: rgba(99, 102, 241, 0.08);
+  --graph-bg: #EDEDE9;                    /* sand-100 — page background */
+  --graph-grid-color: #D6CCC2;            /* sand-300 — dot grid */
+  --graph-selection-bg: rgba(213, 189, 175, 0.15);
+
+  /* Sand scale */
+  --sand-50: #F5EBE0;                     /* cream — inputs, modals, elevated surfaces */
+  --sand-100: #EDEDE9;                    /* warm gray — page background */
+  --sand-200: #E3D5CA;                    /* light sand — cards, panels (tertiary) */
+  --sand-300: #D6CCC2;                    /* warm stone — borders, hover (secondary) */
+  --sand-400: #D5BDAF;                    /* rosy taupe — accent, buttons (primary) */
+  --sand-500: #C4A98E;                    /* deeper taupe — active/pressed states */
+  --sand-600: #A68B6B;                    /* dark taupe — strong text accents */
+  --sand-700: #7C6854;                    /* earth — headings, high-contrast text */
+  --sand-800: #5C4D3C;                    /* deep earth — primary text */
+  --sand-900: #3D3228;                    /* near-black — max contrast text */
 
   /* Node base */
-  --node-bg: rgba(15, 23, 42, 0.6);
-  --node-border: rgba(148, 163, 184, 0.15);
-  --node-text: #e2e8f0;
-  --node-text-secondary: #94a3b8;
+  --node-bg: var(--sand-50);
+  --node-border: var(--sand-300);
+  --node-text: var(--sand-900);
+  --node-text-secondary: var(--sand-700);
   --node-radius: 12px;
-  --node-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --node-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --node-backdrop-blur: blur(16px) saturate(140%);
+  --node-shadow: 0 1px 4px rgba(61, 50, 40, 0.06);
+  --node-shadow-hover: 0 4px 16px rgba(61, 50, 40, 0.10);
 
-  /* Node type colors */
-  --node-start: #10b981;       /* emerald-500 */
-  --node-end: #64748b;         /* slate-500 */
-  --node-action: #3b82f6;      /* blue-500 */
-  --node-decision: #f59e0b;    /* amber-500 */
-  --node-handoff: #8b5cf6;     /* violet-500 */
-  --node-wait: #06b6d4;        /* cyan-500 */
-  --node-error: #ef4444;       /* red-500 */
-  --node-skill: #14b8a6;       /* teal-500 */
+  /* Node type colors — warm-shifted to harmonize with sand */
+  --node-start: #6B8E6B;        /* sage green */
+  --node-end: #A68B6B;          /* warm stone (sand-600) */
+  --node-action: #8B7355;       /* warm brown */
+  --node-decision: #C49A6C;     /* golden sand */
+  --node-handoff: #9E8B9E;      /* muted mauve */
+  --node-wait: #7EA3A3;         /* dusty teal */
+  --node-error: #B86B6B;        /* muted terra cotta */
+  --node-skill: #7A9E8E;        /* sage teal */
 
   /* Edges */
-  --edge-default: #475569;     /* slate-600 */
+  --edge-default: var(--sand-300);
   --edge-width: 1.5px;
   --edge-hover-width: 2.5px;
 
   /* Overlays */
-  --violation-pulse: #ef4444;
-  --drift-warning: #f97316;
-  --clarification-mark: #f59e0b;
-  --execution-glow: #6366f1;
+  --violation-pulse: #B86B6B;
+  --drift-warning: #C49A6C;
+  --clarification-mark: #C49A6C;
+  --execution-glow: var(--sand-400);
 
   /* Panel */
-  --panel-bg: rgba(15, 23, 42, 0.85);
-  --panel-border: rgba(148, 163, 184, 0.12);
-  --panel-backdrop: blur(24px) saturate(160%);
-}
-
-/* Light mode overrides */
-.light {
-  --graph-bg: #fafbfc;
-  --graph-grid-color: rgba(0, 0, 0, 0.04);
-  --node-bg: rgba(255, 255, 255, 0.8);
-  --node-border: rgba(148, 163, 184, 0.25);
-  --node-text: #0f172a;
-  --node-text-secondary: #64748b;
-  --node-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --edge-default: #cbd5e1;
-  --panel-bg: rgba(255, 255, 255, 0.9);
+  --panel-bg: var(--sand-50);
+  --panel-border: var(--sand-300);
 }
 ```
 
@@ -840,9 +860,8 @@ const NODE_DIMENSIONS: Record<string, { width: number; height: number }> = {
 ```css
 /* Base node shell — all types inherit */
 .asd-node {
-  background: var(--node-bg);
-  backdrop-filter: var(--node-backdrop-blur);
-  border: 1px solid var(--node-border);
+  background: var(--sand-50);
+  border: 1px solid var(--sand-300);
   border-left: 3px solid var(--node-type-color);
   border-radius: var(--node-radius);
   box-shadow: var(--node-shadow);
@@ -854,7 +873,7 @@ const NODE_DIMENSIONS: Record<string, { width: number; height: number }> = {
 
 .asd-node:hover {
   box-shadow: var(--node-shadow-hover);
-  border-color: color-mix(in srgb, var(--node-type-color) 40%, var(--node-border));
+  border-color: var(--sand-400);
 }
 
 .asd-node.selected {
@@ -889,13 +908,12 @@ const NODE_DIMENSIONS: Record<string, { width: number; height: number }> = {
 }
 
 @keyframes execution-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--execution-glow) 40%, transparent); }
-  50%      { box-shadow: 0 0 0 8px color-mix(in srgb, var(--execution-glow) 0%, transparent); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(213, 189, 175, 0.4); }
+  50%      { box-shadow: 0 0 0 8px rgba(213, 189, 175, 0); }
 }
 
 .asd-node[data-execution="completed"] {
   opacity: 0.7;
-  filter: saturate(0.6);
 }
 
 .asd-node[data-execution="failed"] {
@@ -909,11 +927,11 @@ const NODE_DIMENSIONS: Record<string, { width: number; height: number }> = {
 ```tsx
 <Background
   variant={BackgroundVariant.Dots}
-  gap={24}
+  gap={20}
   size={1}
-  color="var(--graph-grid-color)"
-  style={{ backgroundColor: 'var(--graph-bg)' }}
+  color="#D6CCC2"     /* sand-300 — subtle warm dots */
 />
+// Canvas background set via CSS: .react-flow__background { background: #EDEDE9; }
 ```
 
 ---
@@ -1252,6 +1270,212 @@ When a SkillNode is selected, the inspector panel shows:
 - [ ] Connector scan → discovers and lists available tools as skills
 - [ ] SkillNode inspector shows input/output schema, API binding, usage, history
 - [ ] Sync status badge renders correctly for all 3 states (synced, drift, pending)
+
+---
+
+## 16. Animated Ingestion Flow (Left-to-Right Pipeline)
+
+### 16.1 Concept
+
+When a user submits a document or NL query, the graph **animates the LLM's
+extraction process in real-time**, building nodes left-to-right as the agent
+discovers requirements, contracts, and skill bindings.
+
+```
+INPUT (left)  →  EXTRACTION (animated)  →  SKILLS (right)  →  OUTPUT (far right)
+────────────────────────────────────────────────────────────────────────────────
+Document/NL   →  LLM parses sections   →  Nodes appear    →  Contract checklist
+              →  Edges animate in       →  Skills light up  →  Coverage score
+```
+
+### 16.2 Animation Sequence
+
+When ingestion starts, the graph canvas shows a progressive left-to-right build:
+
+| Phase | Duration | What Animates |
+|-------|----------|---------------|
+| 1. Input node appears | 0.3s | StartNode fades in at far left with the document/query label |
+| 2. Extraction beam | 0.5s per section | An animated edge extends rightward from the start node. Each section the LLM extracts creates a new node that "grows" into place (scale 0→1 + fade in) |
+| 3. Skill binding | 0.2s per skill | When the LLM identifies a tool call, a SkillNode appears below/right with a teal edge animating from the ActionNode to the SkillNode |
+| 4. Contract derivation | 0.2s per contract | Contract badges fade in on nodes where the LLM detects compliance language |
+| 5. Terminal nodes | 0.3s | EndNode / ErrorNode appear at far right, completing the DAG |
+| 6. Fit view | 0.6s | `fitView({ padding: 0.2, duration: 600 })` smoothly frames the complete graph |
+
+### 16.3 Streaming Integration
+
+The animation is driven by **SSE events from the FastAPI ingestion endpoint**:
+
+```typescript
+type IngestionEvent =
+  | { type: 'section_parsed'; sectionTitle: string; nodeType: string; nodeData: Partial<ASDNode> }
+  | { type: 'edge_created'; source: string; target: string; edgeType: string }
+  | { type: 'skill_identified'; skillName: string; provider: string; connectedNodeId: string }
+  | { type: 'contract_derived'; nodeId: string; rule: string; ruleType: 'must_always' | 'must_never' | 'must_escalate' }
+  | { type: 'gap_detected'; nodeId: string; reason: string }
+  | { type: 'ingestion_complete'; coverageScore: number; nodeCount: number; edgeCount: number }
+  | { type: 'clarification_needed'; nodeId: string; question: string };
+```
+
+Each event triggers the corresponding animation. The hook `useIngestionStream` batches
+events per 16ms frame and applies them to the Zustand store with animation metadata.
+
+### 16.4 Node Entrance Animation
+
+```css
+.asd-node--entering {
+  animation: node-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes node-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+  }
+}
+```
+
+Edges animate using `stroke-dasharray` + `stroke-dashoffset` to "draw" from source to target.
+
+---
+
+## 17. Sidebar Tabs — Knowledge Base & Skill Documents
+
+The application sidebar (currently just Workflows + Marketplace) gains two new tabs
+that serve as the document upload and management layer.
+
+### 17.1 Tab Structure
+
+```
+Sidebar Tabs:
+┌────────────┬────────────┬────────────┬────────────┐
+│ Workflows  │ Knowledge  │ Skills     │ Marketplace│
+│            │ Base       │            │            │
+└────────────┴────────────┴────────────┴────────────┘
+```
+
+### 17.2 Knowledge Base Tab (`/knowledge`)
+
+**Purpose**: Upload and manage source-of-truth documents (SOPs, policies, process guides).
+These are the raw inputs that the ingestion layer transforms into ASDs.
+
+**UI**:
+```
+┌──────────────────────────────────────┐
+│  📚 Knowledge Base                   │
+│  ──────────────────────────────────  │
+│  🔍 Search documents...              │
+│  ──────────────────────────────────  │
+│  ┌─ ↑ Upload Document ────────────┐  │
+│  │  Drop PDF, DOCX, or paste URL  │  │
+│  └────────────────────────────────┘  │
+│                                      │
+│  ▸ SOPs (4)                          │
+│    ○ Vendor Onboarding v2.1  PDF    │
+│      → ASD v4 (synced)              │
+│    ○ Customer Refund Policy  DOCX   │
+│      → ASD v2 (drift detected!)     │
+│    ○ Incident Response       Notion │
+│      → ASD v1 (synced)              │
+│    ○ New Hire Checklist      DOCX   │
+│      → No ASD yet                   │
+│                                      │
+│  ▸ Policies (2)                      │
+│    ○ Data Privacy Policy     PDF    │
+│    ○ Expense Approval Rules  DOCX   │
+│                                      │
+│  ──────────────────────────────────  │
+│  Documents: 6  │  With ASD: 3       │
+└──────────────────────────────────────┘
+```
+
+**Features**:
+- **Upload**: PDF, DOCX, or paste a Notion/Confluence URL
+- **Categorize**: SOPs, Policies, Process Guides, Other
+- **Link to ASD**: Each document shows which ASD was derived from it (if any)
+- **Drift detection**: If a document is re-uploaded or URL content changes, surface a drift warning on the linked ASD
+- **One-click ingest**: "Generate ASD" button on any document triggers the ingestion pipeline → animated graph build
+- **Version tracking**: Document version hash for drift detection
+
+**Data model**:
+```typescript
+type KnowledgeDocument = {
+  id: string;
+  name: string;
+  type: 'pdf' | 'docx' | 'notion' | 'confluence' | 'text';
+  category: 'sop' | 'policy' | 'process_guide' | 'other';
+  sourceUrl?: string;           // For Notion/Confluence
+  fileHash: string;             // For drift detection
+  uploadedAt: string;
+  linkedAsdId?: string;         // Which ASD was derived from this
+  linkedAsdVersion?: number;
+  driftDetected: boolean;
+};
+```
+
+### 17.3 Skills Tab (`/skills`)
+
+**Purpose**: Upload skill documents and manage the skill knowledge base. Uploading a
+skill document automatically creates SkillNodes that can be dragged onto any ASD graph.
+
+**UI**:
+```
+┌──────────────────────────────────────┐
+│  ⚙️ Skill Library                    │
+│  ──────────────────────────────────  │
+│  🔍 Search skills...                 │
+│  ──────────────────────────────────  │
+│  ┌─ + Add Skill ──────────────────┐  │
+│  │  Import OpenAPI  │  Manual     │  │
+│  │  Scan Connector  │  Upload Doc │  │
+│  └────────────────────────────────┘  │
+│                                      │
+│  ▸ Search (2)                        │
+│    ● Web Search         Google       │
+│      Used in: 3 ASDs                 │
+│    ● Knowledge Retrieval RAG         │
+│      Used in: 1 ASD                  │
+│                                      │
+│  ▸ Communication (3)                 │
+│    ● Send Email         Gmail        │
+│    ● Post Message       Slack        │
+│    ● Create Ticket      Jira         │
+│                                      │
+│  ▸ Data (2)                          │
+│    ● CRM Lookup         Salesforce   │
+│    ● DB Query           Postgres     │
+│                                      │
+│  ──────────────────────────────────  │
+│  Skills: 7  │  Active in ASDs: 5     │
+└──────────────────────────────────────┘
+```
+
+**Features**:
+- **Import methods**: OpenAPI spec upload, connector scan, manual creation, skill document upload
+- **Auto-node creation**: Importing a skill document creates a SkillNode definition in the registry. The node can then be dragged onto any ASD canvas.
+- **Usage tracking**: Each skill shows how many ASDs reference it
+- **Drag to canvas**: Drag a skill from this tab directly onto an open ASD graph to create a SkillNode
+- **Bidirectional sync**: Edit a SkillNode on the graph → skill document updates here. Edit here → SkillNodes on graphs show drift badge.
+
+### 17.4 Sidebar Route Updates
+
+Add to the existing `Sidebar.tsx` NAV array:
+
+```typescript
+const NAV = [
+  { href: '/', icon: GitBranch, label: 'Workflows' },
+  { href: '/knowledge', icon: BookOpen, label: 'Knowledge Base' },
+  { href: '/skills', icon: Cpu, label: 'Skills' },
+  { href: '/marketplace', icon: Store, label: 'Marketplace' },
+];
+```
+
+New pages:
+- `app/knowledge/page.tsx` → Knowledge Base document manager
+- `app/skills/page.tsx` → Skill library manager
 
 ---
 

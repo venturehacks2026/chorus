@@ -57,7 +57,7 @@ export default function AgentConfigPanel() {
     <div className="w-72 border-l border-border bg-bg-subtle flex flex-col">
       <div className="flex items-center justify-between px-4 py-3.5 border-b border-border">
         <span className="text-sm font-medium">Agent config</span>
-        <button onClick={save} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-accent hover:bg-accent-hover rounded-lg text-xs text-white font-medium transition-colors">
+        <button onClick={save} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-sand-400 hover:bg-sand-500 rounded-lg text-xs text-sand-900 font-medium transition-colors">
           <Save className="w-3 h-3" />Save
         </button>
       </div>

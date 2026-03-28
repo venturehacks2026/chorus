@@ -26,6 +26,15 @@ Platform that bridges human SOPs and AI agent execution. Ingests human-facing St
 5. **Execution Layer** — Routes tasks to correct ASD via semantic search. Contract enforcement interceptor checks preconditions, must-never rules, and escalation triggers before every tool call. Human handoff pauses execution until response.
 6. **Dashboard** — Execution timeline, violation feed, stuck agent queue, drift alerts, inline contract/ASD editors, coverage scores.
 
+## UI Architecture
+
+- **Sand palette**: `#EDEDE9` `#D6CCC2` `#F5EBE0` `#E3D5CA` `#D5BDAF` — warm earth tones, light mode
+- **Graph layout**: Left-to-right (LR) flow direction, not top-to-bottom
+- **Animated ingestion**: When a document/NL query is submitted, nodes build left-to-right in real-time as the LLM extracts requirements
+- **Sidebar tabs**: Workflows | Knowledge Base | Skills | Marketplace
+- **Knowledge Base** (`/knowledge`) — Upload SOPs, policies, process docs. One-click "Generate ASD" triggers animated ingestion.
+- **Skills** (`/skills`) — Upload skill documents, import OpenAPI specs, scan connectors. Auto-creates SkillNodes for drag-and-drop onto graphs.
+
 ## Design Principles
 
 - SOP is always source of truth

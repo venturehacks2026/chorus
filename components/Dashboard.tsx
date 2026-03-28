@@ -52,7 +52,7 @@ export default function Dashboard() {
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-3.5 py-2 bg-accent hover:bg-accent-hover rounded-lg text-sm font-medium text-white transition-colors"
+          className="flex items-center gap-2 px-3.5 py-2 bg-sand-400 hover:bg-sand-500 rounded-lg text-sm font-medium text-sand-900 transition-colors"
         >
           <Plus className="w-4 h-4" />
           New workflow
@@ -78,7 +78,7 @@ export default function Dashboard() {
             </p>
             <button
               onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-3.5 py-2 bg-accent hover:bg-accent-hover rounded-lg text-sm font-medium text-white transition-colors"
+              className="flex items-center gap-2 px-3.5 py-2 bg-sand-400 hover:bg-sand-500 rounded-lg text-sm font-medium text-sand-900 transition-colors"
             >
               <Plus className="w-4 h-4" />
               Create workflow

@@ -27,17 +27,17 @@ export const AgentNode = memo(function AgentNode({ data: raw, selected }: NodePr
   }
 
   const ringClass = {
-    running: 'border-blue-500/80 shadow-blue-500/20',
-    completed: 'border-emerald-500/60',
-    failed: 'border-red-500/60',
+    running: 'border-sand-500 shadow-sand-400/20',
+    completed: 'border-emerald-600/50',
+    failed: 'border-red-400/60',
     idle: 'border-border',
     skipped: 'border-border/50',
   }[status];
 
   const StatusIcon = {
-    running: <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />,
-    completed: <CheckCircle className="w-3 h-3 text-emerald-400" />,
-    failed: <XCircle className="w-3 h-3 text-red-400" />,
+    running: <Loader2 className="w-3 h-3 text-sand-600 animate-spin" />,
+    completed: <CheckCircle className="w-3 h-3 text-emerald-600" />,
+    failed: <XCircle className="w-3 h-3 text-red-500" />,
     idle: null,
     skipped: null,
   }[status];
@@ -54,24 +54,24 @@ export const AgentNode = memo(function AgentNode({ data: raw, selected }: NodePr
       )}
     >
       {status === 'running' && (
-        <span className="absolute inset-0 rounded-xl border border-blue-500/40 animate-pulse-soft pointer-events-none" />
+        <span className="absolute inset-0 rounded-xl border border-sand-400/50 animate-pulse-soft pointer-events-none" />
       )}
 
-      <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-border !border-border/80" />
-      <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-border !border-border/80" />
+      <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-sand-400 !border-sand-300" />
+      <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-sand-400 !border-sand-300" />
 
       <div className="flex items-start gap-2.5">
         <div className={cn(
           'w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5',
-          status === 'running' ? 'bg-blue-500/15' :
-          status === 'completed' ? 'bg-emerald-500/15' :
-          status === 'failed' ? 'bg-red-500/15' : 'bg-accent-muted',
+          status === 'running' ? 'bg-sand-400/20' :
+          status === 'completed' ? 'bg-emerald-500/10' :
+          status === 'failed' ? 'bg-red-500/10' : 'bg-accent-muted',
         )}>
           <Bot className={cn(
             'w-3.5 h-3.5',
-            status === 'running' ? 'text-blue-400' :
-            status === 'completed' ? 'text-emerald-400' :
-            status === 'failed' ? 'text-red-400' : 'text-accent',
+            status === 'running' ? 'text-sand-600' :
+            status === 'completed' ? 'text-emerald-600' :
+            status === 'failed' ? 'text-red-500' : 'text-sand-700',
           )} />
         </div>
 

@@ -2,12 +2,17 @@
 
 import { useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrthographicCamera, Edges } from '@react-three/drei';
+import { OrthographicCamera } from '@react-three/drei';
 import * as THREE from 'three';
 
-/* ── grid: 12×8 towers, wider spread ─────────────────────────────────────── */
-const COLS = 12;
-const ROWS = 8;
+/* ── palette ─────────────────────────────────────────────────────────────── */
+const C_MAIN  = new THREE.Color('#7c3aed'); // violet-700 — tall
+const C_MID   = new THREE.Color('#a78bfa'); // violet-400 — medium
+const C_LIGHT = new THREE.Color('#ddd6fe'); // violet-200 — short
+
+/* ── grid: 8×6 towers ────────────────────────────────────────────────────── */
+const COLS = 8;
+const ROWS = 6;
 const GAP  = 1.05;
 
 function seededRand(seed: number) {
@@ -15,24 +20,32 @@ function seededRand(seed: number) {
   return x - Math.floor(x);
 }
 
+function towerColor(h: number) {
+  if (h > 3.5) return C_MAIN;
+  if (h > 2.0) return C_MID;
+  return C_LIGHT;
+}
+
 const TOWERS = Array.from({ length: COLS * ROWS }, (_, i) => {
   const col = i % COLS;
   const row = Math.floor(i / COLS);
   const r   = seededRand(i * 7.3 + 13.1);
-  const maxH = 0.4 + r * 4.2;
+  const maxH = 0.4 + r * 3.8;
   const dist = Math.sqrt((col - COLS / 2) ** 2 + (row - ROWS / 2) ** 2);
-  const boost = Math.max(0, 1 - dist / 5) * 2.0;
+  const boost = Math.max(0, 1 - dist / 4) * 1.8;
+  const finalH = Math.min(maxH + boost, 4.8);
   return {
     x: (col - COLS / 2) * GAP,
     z: (row - ROWS / 2) * GAP,
-    maxH: Math.min(maxH + boost, 5.2),
+    maxH: finalH,
     phase: seededRand(i * 3.7) * Math.PI * 2,
     waveCol: col,
     waveRow: row,
+    color: towerColor(finalH),
   };
 });
 
-function Tower({ x, z, maxH, phase, waveCol, waveRow }: typeof TOWERS[number]) {
+function Tower({ x, z, maxH, phase, waveCol, waveRow, color }: typeof TOWERS[number]) {
   const mesh = useRef<THREE.Mesh>(null!);
 
   useFrame(({ clock }) => {
@@ -46,26 +59,16 @@ function Tower({ x, z, maxH, phase, waveCol, waveRow }: typeof TOWERS[number]) {
   });
 
   return (
-    <mesh ref={mesh} position={[x, 0, z]}>
-      <boxGeometry args={[0.84, 1, 0.84]} />
-      {/* Transparent fill — light violet */}
-      <meshStandardMaterial
-        color="#ede9fe"
-        transparent
-        opacity={0.28}
-        roughness={0.2}
-        metalness={0.0}
-        depthWrite={false}
-      />
-      {/* Dark purple edges via Edges helper */}
-      <Edges threshold={15} color="#5b21b6" />
+    <mesh ref={mesh} position={[x, 0, z]} castShadow>
+      <boxGeometry args={[0.82, 1, 0.82]} />
+      <meshStandardMaterial color={color} roughness={0.4} metalness={0.08} />
     </mesh>
   );
 }
 
 /* ── ground grid ─────────────────────────────────────────────────────────── */
 function GroundGrid() {
-  const SIZE = 12;
+  const SIZE = 9;
   const points: THREE.Vector3[] = [];
   for (let i = -SIZE; i <= SIZE; i++) {
     points.push(new THREE.Vector3(-SIZE, -0.01, i), new THREE.Vector3(SIZE, -0.01, i));
@@ -74,7 +77,7 @@ function GroundGrid() {
   const geo = new THREE.BufferGeometry().setFromPoints(points);
   return (
     <lineSegments geometry={geo}>
-      <lineBasicMaterial color="#c4b5fd" transparent opacity={0.3} />
+      <lineBasicMaterial color="#ddd6fe" transparent opacity={0.45} />
     </lineSegments>
   );
 }
@@ -86,12 +89,15 @@ function Scene() {
       <OrthographicCamera
         makeDefault
         position={[10, 10, 10]}
-        zoom={52}
+        zoom={58}
         near={0.1}
         far={300}
       />
-      <ambientLight intensity={1.2} />
-      <directionalLight position={[8, 14, 6]} intensity={0.6} />
+
+      <ambientLight intensity={0.55} />
+      <directionalLight position={[8, 14, 6]}  intensity={1.5} castShadow shadow-mapSize={[1024, 1024]} />
+      <directionalLight position={[-6, 5, -5]} intensity={0.35} color="#a78bfa" />
+      <directionalLight position={[0, -3, 0]}  intensity={0.08} />
 
       <GroundGrid />
       {TOWERS.map((t, i) => <Tower key={i} {...t} />)}
@@ -102,6 +108,7 @@ function Scene() {
 export default function IsometricCubes() {
   return (
     <Canvas
+      shadows
       style={{ background: 'transparent' }}
       gl={{ antialias: true, alpha: true }}
     >

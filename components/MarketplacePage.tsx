@@ -1,163 +1,221 @@
 'use client';
 
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Search, Globe, Brain, Code, FileText, Database, Zap, Key, Check, X, Eye, EyeOff, Plus, Rss, Link2 } from 'lucide-react';
-import type { Connector } from '@/lib/types';
+import { useState, useEffect } from 'react';
+import { Key, Check, X, Eye, EyeOff, Loader2, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
-// ─── Connector metadata ───────────────────────────────────────────────────────
+// ─── Only connectors that require an API key are shown ───────────────────────
+// No-key connectors (web-scraper, rss-reader, code-executor, etc.) are internal
+// tools that just work — they don't belong in a "marketplace" UI.
 
-const CONNECTOR_META: Record<string, {
-  icon: React.ElementType;
-  iconColor: string;
-  iconBg: string;
+interface ConnectorMeta {
+  domain: string;          // used for icon.horse logo fetch
+  displayName: string;     // shown on card
   category: string;
-  popular?: boolean;
-  secretKey?: string;          // env var name for the API key
-  secretLabel?: string;        // human label shown in modal
-  secretPlaceholder?: string;
-}> = {
-  'web-search':     { icon: Globe,    iconColor: 'text-blue-500',    iconBg: 'bg-blue-50',    category: 'Research',      popular: true,  secretKey: 'BRAVE_API_KEY',       secretLabel: 'Brave Search API Key',      secretPlaceholder: 'BSAxxxxxxxxxxxx…' },
-  'perplexity':     { icon: Brain,    iconColor: 'text-violet-500',  iconBg: 'bg-violet-50',  category: 'Research',      popular: true,  secretKey: 'PERPLEXITY_API_KEY',  secretLabel: 'Perplexity API Key',        secretPlaceholder: 'pplx-xxxxxxxxxxxx…' },
-  'web-scraper':    { icon: Globe,    iconColor: 'text-sky-500',     iconBg: 'bg-sky-50',     category: 'Research',      popular: true  },
-  'rss-reader':     { icon: Rss,      iconColor: 'text-orange-500',  iconBg: 'bg-orange-50',  category: 'Research',      popular: true  },
-  'json-api':       { icon: Link2,    iconColor: 'text-teal-500',    iconBg: 'bg-teal-50',    category: 'Integrations',  popular: true  },
-  'code-executor':  { icon: Code,     iconColor: 'text-emerald-500', iconBg: 'bg-emerald-50', category: 'Dev Tools',     popular: true  },
-  'file-reader':    { icon: FileText, iconColor: 'text-amber-500',   iconBg: 'bg-amber-50',   category: 'Storage' },
-  'memory':         { icon: Database, iconColor: 'text-rose-500',    iconBg: 'bg-rose-50',    category: 'Memory' },
-  'data-store':     { icon: Database, iconColor: 'text-indigo-500',  iconBg: 'bg-indigo-50',  category: 'Storage',       popular: true  },
-  'http':           { icon: Zap,      iconColor: 'text-cyan-500',    iconBg: 'bg-cyan-50',    category: 'Integrations',  secretKey: 'HTTP_BEARER_TOKEN',   secretLabel: 'Bearer Token (optional)', secretPlaceholder: 'Bearer …' },
-};
+  description: string;
+  secretLabel: string;
+  secretPlaceholder: string;
+  docsUrl: string;
+  slug: string;
+}
 
-const MOCK_USAGE: Record<string, number[]> = {
-  'web-search':    [12, 19, 14, 28, 22, 35, 31],
-  'perplexity':    [8,  14, 11, 18, 15, 22, 20],
-  'web-scraper':   [6,  10, 13, 17, 21, 25, 28],
-  'rss-reader':    [3,  5,  8,  11, 14, 18, 22],
-  'json-api':      [4,  7,  9,  13, 16, 19, 23],
-  'code-executor': [5,  9,  12, 10, 17, 14, 19],
-  'file-reader':   [3,  4,  6,  5,  8,  7,  9],
-  'memory':        [2,  3,  4,  5,  4,  6,  8],
-  'data-store':    [4,  6,  8,  9,  12, 14, 17],
-  'http':          [1,  2,  3,  3,  5,  4,  6],
-};
+// Only API-key-gated connectors appear here
+const KEYED_CONNECTORS: ConnectorMeta[] = [
+  {
+    slug: 'web-search',
+    domain: 'brave.com',
+    displayName: 'Brave Search',
+    category: 'Search',
+    description: 'Real-time web search powered by Brave — privacy-first, no tracking, independent index.',
+    secretLabel: 'Brave Search API Key',
+    secretPlaceholder: 'BSAxxxxxxxxxxxxxxxxxxxx…',
+    docsUrl: 'https://brave.com/search/api/',
+  },
+  {
+    slug: 'parallel-research',
+    domain: 'brave.com',
+    displayName: 'Parallel Research',
+    category: 'Search',
+    description: 'Run multiple Brave searches concurrently and merge deduplicated results — faster broad research.',
+    secretLabel: 'Brave Search API Key',
+    secretPlaceholder: 'BSAxxxxxxxxxxxxxxxxxxxx…',
+    docsUrl: 'https://brave.com/search/api/',
+  },
+  {
+    slug: 'perplexity',
+    domain: 'perplexity.ai',
+    displayName: 'Perplexity',
+    category: 'Research',
+    description: 'Deep research queries with cited sources via Perplexity Sonar — best for nuanced, cited answers.',
+    secretLabel: 'Perplexity API Key',
+    secretPlaceholder: 'pplx-xxxxxxxxxxxxxxxxxxxx…',
+    docsUrl: 'https://docs.perplexity.ai/',
+  },
+];
 
-const ICON_COLOR_HEX: Record<string, string> = {
-  'text-blue-500':    '#3b82f6',
-  'text-violet-500':  '#8b5cf6',
-  'text-emerald-500': '#10b981',
-  'text-amber-500':   '#f59e0b',
-  'text-rose-500':    '#f43f5e',
-  'text-cyan-500':    '#06b6d4',
-  'text-sky-500':     '#0ea5e9',
-  'text-orange-500':  '#f97316',
-  'text-teal-500':    '#14b8a6',
-  'text-indigo-500':  '#6366f1',
-};
+// ─── Logo component using Brandfetch API (server-proxied) ────────────────────
 
-// ─── Local key store (in-memory for demo; swap to localStorage or vault) ─────
+function ServiceLogo({ domain, size = 32 }: { domain: string; size?: number }) {
+  const [iconUrl, setIconUrl] = useState<string | null>(null);
+  const [errored, setErrored] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-type KeyStore = Record<string, string>;
-const keyStore: KeyStore = {};
+  useEffect(() => {
+    fetch(`/api/brand?domain=${encodeURIComponent(domain)}`)
+      .then(r => r.json())
+      .then(({ iconUrl: url }: { iconUrl: string | null }) => {
+        setIconUrl(url);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [domain]);
 
-// ─── Sparkline ────────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div
+        className="rounded-xl bg-gray-100 animate-pulse shrink-0"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
 
-function Sparkline({ values, iconColor }: { values: number[]; iconColor: string }) {
-  const max = Math.max(...values);
-  const min = Math.min(...values);
-  const range = max - min || 1;
-  const w = 64; const h = 24;
-  const pts = values.map((v, i) => `${(i / (values.length - 1)) * w},${h - ((v - min) / range) * h}`);
-  const stroke = ICON_COLOR_HEX[iconColor] ?? '#7c3aed';
+  if (!iconUrl || errored) {
+    return (
+      <div
+        className="rounded-xl bg-violet-100 flex items-center justify-center font-bold text-violet-600 uppercase shrink-0"
+        style={{ width: size, height: size, fontSize: size * 0.38 }}
+      >
+        {domain[0]}
+      </div>
+    );
+  }
+
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible">
-      <polyline points={pts.join(' ')} fill="none" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
-      <circle cx={w} cy={h - ((values[values.length - 1] - min) / range) * h} r="2" fill={stroke} />
-    </svg>
+    <img
+      src={iconUrl}
+      alt={domain}
+      width={size}
+      height={size}
+      className="rounded-xl object-contain shrink-0"
+      onError={() => setErrored(true)}
+    />
   );
 }
 
 // ─── API Key Modal ────────────────────────────────────────────────────────────
 
 function ApiKeyModal({
-  connector,
   meta,
   onClose,
-  onSave,
+  onSaved,
 }: {
-  connector: Connector;
-  meta: typeof CONNECTOR_META[string];
+  meta: ConnectorMeta;
   onClose: () => void;
-  onSave: (slug: string, key: string) => void;
+  onSaved: () => void;
 }) {
   const [key, setKey] = useState('');
   const [show, setShow] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSave() {
+  async function handleSave() {
     if (!key.trim()) return;
-    onSave(connector.slug, key.trim());
-    onClose();
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/connectors/secrets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: meta.slug, secret_value: key.trim() }),
+      });
+      if (!res.ok) throw new Error();
+      onSaved();
+      onClose();
+    } catch {
+      setError('Failed to save. Try again.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-sm bg-white border border-gray-200 rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm bg-white border border-gray-200 rounded-2xl shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-2.5">
-            <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', meta.iconBg)}>
-              <meta.icon className={cn('w-4 h-4', meta.iconColor)} strokeWidth={1.5} />
+          <div className="flex items-center gap-3">
+            <ServiceLogo domain={meta.domain} size={36} />
+            <div>
+              <p className="font-semibold text-sm text-gray-900">{meta.displayName}</p>
+              <a
+                href={meta.docsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] text-violet-500 hover:text-violet-700 flex items-center gap-0.5 transition-colors"
+              >
+                Get API key <ExternalLink className="w-2.5 h-2.5" />
+              </a>
             </div>
-            <span className="font-semibold text-sm text-gray-900">Connect {connector.name}</span>
           </div>
-          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
+          <button
+            onClick={onClose}
+            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="px-5 py-4 space-y-4">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">{meta.secretLabel ?? 'API Key'}</label>
-            <div className="relative">
-              <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-400 bg-white transition-all">
-                <Key className="w-3.5 h-3.5 text-gray-300 shrink-0" />
-                <input
-                  type={show ? 'text' : 'password'}
-                  value={key}
-                  onChange={e => setKey(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleSave()}
-                  placeholder={meta.secretPlaceholder ?? 'Enter API key…'}
-                  autoFocus
-                  className="flex-1 text-sm text-gray-900 placeholder:text-gray-400 bg-transparent focus:outline-none font-mono min-w-0"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShow(s => !s)}
-                  className="text-gray-300 hover:text-gray-500 transition-colors"
-                >
-                  {show ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                </button>
-              </div>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">{meta.secretLabel}</label>
+            <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2.5 focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-400 bg-white transition-all">
+              <Key className="w-3.5 h-3.5 text-gray-300 shrink-0" />
+              <input
+                type={show ? 'text' : 'password'}
+                value={key}
+                onChange={e => setKey(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSave()}
+                placeholder={meta.secretPlaceholder}
+                autoFocus
+                className="flex-1 text-sm text-gray-900 placeholder:text-gray-400 bg-transparent focus:outline-none font-mono min-w-0"
+              />
+              <button
+                type="button"
+                onClick={() => setShow(s => !s)}
+                className="text-gray-300 hover:text-gray-500 transition-colors shrink-0"
+              >
+                {show ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
             </div>
+            {error && <p className="text-[11px] text-red-500 mt-1.5">{error}</p>}
             <p className="text-[11px] text-gray-400 mt-1.5">
-              Stored locally in your session. Never sent to our servers.
+              Stored securely server-side. Never exposed to the browser or committed to GitHub.
             </p>
           </div>
 
-          <div className="flex gap-2 pt-1">
+          <div className="flex gap-2">
             <button
               onClick={handleSave}
-              disabled={!key.trim()}
+              disabled={!key.trim() || saving}
               className={cn(
-                'flex-1 py-2 rounded-lg text-sm font-semibold transition-all',
+                'flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2',
                 'bg-violet-600 hover:bg-violet-700 text-white shadow-sm',
                 'disabled:opacity-40 disabled:cursor-not-allowed',
               )}
             >
-              Save key
+              {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {saving ? 'Saving…' : 'Save key'}
             </button>
-            <button onClick={onClose} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors">
+            <button
+              onClick={onClose}
+              className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+            >
               Cancel
             </button>
           </div>
@@ -170,95 +228,75 @@ function ApiKeyModal({
 // ─── Connector Card ───────────────────────────────────────────────────────────
 
 function ConnectorCard({
-  c,
+  meta,
+  keyUpdateTick,
   onAddKey,
 }: {
-  c: Connector;
-  onAddKey: (c: Connector) => void;
+  meta: ConnectorMeta;
+  keyUpdateTick: number;
+  onAddKey: (m: ConnectorMeta) => void;
 }) {
-  const meta = CONNECTOR_META[c.slug];
-  const Icon = meta?.icon ?? Zap;
-  const iconColor = meta?.iconColor ?? 'text-violet-500';
-  const iconBg = meta?.iconBg ?? 'bg-violet-50';
-  const usage = MOCK_USAGE[c.slug] ?? [1, 1, 1, 1, 1, 1, 1];
-  const totalRuns = usage.reduce((a, b) => a + b, 0);
-  const needsKey = !!meta?.secretKey;
-  const hasKey = needsKey && !!keyStore[c.slug];
+  const [hasKey, setHasKey] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    setChecking(true);
+    fetch(`/api/connectors/secrets/${meta.slug}`)
+      .then(r => r.json())
+      .then(({ exists }: { exists: boolean }) => setHasKey(exists))
+      .catch(() => setHasKey(false))
+      .finally(() => setChecking(false));
+  }, [meta.slug, keyUpdateTick]);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-4 hover:border-gray-300 hover:shadow-sm transition-all duration-150">
-      {/* Top row */}
-      <div className="flex items-start justify-between">
-        <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', iconBg)}>
-          <Icon className={cn('w-5 h-5', iconColor)} strokeWidth={1.5} />
+    <div className="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col gap-4 hover:border-gray-200 hover:shadow-sm transition-all duration-150">
+      {/* Logo + name */}
+      <div className="flex items-center gap-3">
+        <ServiceLogo domain={meta.domain} size={40} />
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm text-gray-900">{meta.displayName}</p>
+          <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{meta.category}</span>
         </div>
-        <div className="flex items-center gap-2">
-          {meta?.popular && (
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-600 border border-violet-100">
-              Popular
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Name + category */}
-      <div>
-        <p className="font-semibold text-sm text-gray-900">{c.name}</p>
-        <p className="text-xs text-gray-400 mt-0.5">{meta?.category ?? 'Tools'}</p>
+        {hasKey && !checking && (
+          <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+            <Check className="w-3 h-3 text-emerald-600" strokeWidth={3} />
+          </div>
+        )}
       </div>
 
       {/* Description */}
-      <p className="text-xs text-gray-500 leading-relaxed line-clamp-2 flex-1">{c.description}</p>
+      <p className="text-xs text-gray-500 leading-relaxed flex-1">{meta.description}</p>
 
-      {/* Sparkline */}
-      <div className="flex items-end justify-between pt-1 border-t border-gray-100">
-        <div>
-          <p className="text-[10px] text-gray-400 mb-1">7-day usage</p>
-          <Sparkline values={usage} iconColor={iconColor} />
-        </div>
-        <div className="text-right">
-          <p className="text-base font-semibold text-gray-900 tabular-nums">{totalRuns}</p>
-          <p className="text-[10px] text-gray-400">runs</p>
-        </div>
-      </div>
-
-      {/* Add / key section */}
-      {needsKey ? (
-        hasKey ? (
-          <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
-            <div className="flex items-center gap-1.5 flex-1">
-              <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center">
-                <Check className="w-2.5 h-2.5 text-emerald-600" strokeWidth={3} />
-              </div>
+      {/* Key action */}
+      <div className="pt-1 border-t border-gray-50">
+        {checking ? (
+          <div className="flex items-center gap-1.5 h-9">
+            <Loader2 className="w-3.5 h-3.5 text-gray-300 animate-spin" />
+            <span className="text-xs text-gray-400">Checking…</span>
+          </div>
+        ) : hasKey ? (
+          <div className="flex items-center justify-between h-9">
+            <div className="flex items-center gap-1.5">
+              <Check className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.5} />
               <span className="text-xs text-emerald-600 font-medium">Connected</span>
-              <span className="text-[11px] font-mono text-gray-400 ml-1">
-                {'•'.repeat(8)}{keyStore[c.slug].slice(-4)}
-              </span>
             </div>
             <button
-              onClick={() => onAddKey(c)}
-              className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
+              onClick={() => onAddKey(meta)}
+              className="text-[11px] text-gray-400 hover:text-violet-600 transition-colors"
             >
-              Update
+              Update key
             </button>
           </div>
         ) : (
           <button
-            onClick={() => onAddKey(c)}
-            className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50/40 transition-all"
+            onClick={() => onAddKey(meta)}
+            className="flex items-center justify-center gap-2 w-full h-9 rounded-xl border border-dashed border-gray-200 text-xs text-gray-400 hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50/40 transition-all font-medium"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Key className="w-3.5 h-3.5" />
             Add API key
           </button>
-        )
-      ) : (
-        <div className="flex items-center gap-1.5 pt-1 border-t border-gray-100">
-          <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center">
-            <Check className="w-2.5 h-2.5 text-emerald-600" strokeWidth={3} />
-          </div>
-          <span className="text-xs text-emerald-600 font-medium">No key required</span>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -266,96 +304,49 @@ function ConnectorCard({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function MarketplacePage() {
-  const [search, setSearch] = useState('');
-  const [addingFor, setAddingFor] = useState<Connector | null>(null);
-  const [, forceRender] = useState(0);
+  const [addingFor, setAddingFor] = useState<ConnectorMeta | null>(null);
+  const [keyUpdateTick, setKeyUpdateTick] = useState(0);
 
-  const { data: connectors = [], isLoading, isError } = useQuery<Connector[]>({
-    queryKey: ['connectors'],
-    queryFn: async () => {
-      const res = await fetch('/api/connectors');
-      const json = await res.json();
-      return Array.isArray(json) ? json : [];
-    },
-  });
-
-  const filtered = connectors.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.description.toLowerCase().includes(search.toLowerCase()),
-  );
-
-  const popular = filtered.filter(c => CONNECTOR_META[c.slug]?.popular);
-  const rest    = filtered.filter(c => !CONNECTOR_META[c.slug]?.popular);
-
-  function handleSaveKey(slug: string, key: string) {
-    keyStore[slug] = key;
-    forceRender(n => n + 1);
+  function handleKeySaved() {
+    setKeyUpdateTick(t => t + 1);
   }
-
-  const addingMeta = addingFor ? CONNECTOR_META[addingFor.slug] : null;
 
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="px-8 py-5 border-b border-gray-100 flex items-center justify-between shrink-0">
-        <div>
-          <h1 className="text-base font-semibold text-gray-900">Marketplace</h1>
-          <p className="text-sm text-gray-400 mt-0.5">API connectors for your agents</p>
-        </div>
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search…"
-            className="w-48 pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all"
-          />
-        </div>
+      <div className="px-8 py-6 border-b border-gray-100 shrink-0">
+        <h1 className="text-base font-semibold text-gray-900">Marketplace</h1>
+        <p className="text-sm text-gray-400 mt-0.5">
+          Connect external APIs to give your agents access to real-time data and research tools.
+        </p>
       </div>
 
+      {/* Cards */}
       <div className="flex-1 overflow-y-auto px-8 py-6">
-        {isLoading && (
-          <div className="flex items-center justify-center h-40">
-            <div className="w-4 h-4 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
-          </div>
-        )}
-        {isError && <p className="text-sm text-red-500">Could not load connectors.</p>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {KEYED_CONNECTORS.map(meta => (
+            <ConnectorCard
+              key={meta.slug}
+              meta={meta}
+              keyUpdateTick={keyUpdateTick}
+              onAddKey={setAddingFor}
+            />
+          ))}
+        </div>
 
-        {!isLoading && !isError && (
-          <div className="space-y-8">
-            {popular.length > 0 && (
-              <section>
-                <h2 className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-4">Popular</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {popular.map(c => <ConnectorCard key={c.id} c={c} onAddKey={setAddingFor} />)}
-                </div>
-              </section>
-            )}
-            {rest.length > 0 && (
-              <section>
-                <h2 className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-4">All Connectors</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {rest.map(c => <ConnectorCard key={c.id} c={c} onAddKey={setAddingFor} />)}
-                </div>
-              </section>
-            )}
-            {filtered.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-48 text-center">
-                <p className="text-sm font-medium text-gray-900">No connectors found</p>
-                <p className="text-xs text-gray-400 mt-1">Try a different search term</p>
-              </div>
-            )}
-          </div>
-        )}
+        <div className="mt-8 p-4 rounded-xl bg-gray-50 border border-gray-100">
+          <p className="text-xs font-medium text-gray-500 mb-1">Built-in connectors</p>
+          <p className="text-xs text-gray-400 leading-relaxed">
+            Web scraper, RSS reader, JSON API, code executor, data store, memory, and HTTP are built in and require no API key — they&apos;re available to all agents automatically.
+          </p>
+        </div>
       </div>
 
-      {/* API Key Modal */}
-      {addingFor && addingMeta && (
+      {addingFor && (
         <ApiKeyModal
-          connector={addingFor}
-          meta={addingMeta}
+          meta={addingFor}
           onClose={() => setAddingFor(null)}
-          onSave={handleSaveKey}
+          onSaved={handleKeySaved}
         />
       )}
     </div>

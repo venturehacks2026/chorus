@@ -8,6 +8,7 @@ import { DataStoreConnector } from './data-store';
 import { WebScraperConnector } from './web-scraper';
 import { RssReaderConnector } from './rss-reader';
 import { JsonApiConnector } from './json-api';
+import { ParallelResearchConnector } from './parallel-research';
 import type { ConnectorBase } from './base';
 
 export type ConnectorRegistry = Map<string, ConnectorBase>;
@@ -18,6 +19,7 @@ export function getRegistry(): ConnectorRegistry {
   if (!registry) {
     const connectors: ConnectorBase[] = [
       new WebSearchConnector(),
+      new ParallelResearchConnector(),
       new PerplexityConnector(),
       new HttpConnector(),
       new CodeExecutorConnector(),

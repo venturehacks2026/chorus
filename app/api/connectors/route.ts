@@ -32,12 +32,17 @@ export async function GET() {
 
 function getVaultKeys(slug: string): string[] {
   const map: Record<string, string[]> = {
-    'web-search':    ['BRAVE_API_KEY'],
-    'perplexity':   ['PERPLEXITY_API_KEY'],
-    'http':          [],
-    'code-executor': [],
-    'file-reader':   [],
-    'memory':        [],
+    'web-search':        ['BRAVE_API_KEY'],
+    'parallel-research': ['BRAVE_API_KEY'],
+    'perplexity':        ['PERPLEXITY_API_KEY'],
+    'http':              [],
+    'code-executor':     [],
+    'file-reader':       [],
+    'memory':            [],
+    'data-store':        [],
+    'web-scraper':       [],
+    'rss-reader':        [],
+    'json-api':          [],
   };
   return map[slug] ?? [];
 }

@@ -75,18 +75,45 @@ async function insertStep(
   });
 }
 
+// Env-var fallback map (connector slug → env var names)
+const SECRET_ENV_MAP: Record<string, string[]> = {
+  'web-search':        ['BRAVE_API_KEY'],
+  'parallel-research': ['BRAVE_API_KEY'],
+  'perplexity':        ['PERPLEXITY_API_KEY'],
+};
+
 function getSecretsFromEnv(connectorSlug: string): Record<string, string> {
-  const secretMap: Record<string, string[]> = {
-    'web-search': ['BRAVE_API_KEY'],
-    'perplexity': ['PERPLEXITY_API_KEY'],
-  };
-  const keys = secretMap[connectorSlug] ?? [];
+  const keys = SECRET_ENV_MAP[connectorSlug] ?? [];
   const result: Record<string, string> = {};
   for (const key of keys) {
-    const val = process.env[key] ?? process.env[key.toLowerCase().replace(/-/g, '_')];
+    const val = process.env[key];
     if (val) result[key.toLowerCase()] = val;
   }
   return result;
+}
+
+async function getSecrets(connectorSlug: string, supabase: SupabaseClient): Promise<Record<string, string>> {
+  try {
+    // Check DB first — keys saved via Marketplace UI
+    const { data } = await supabase
+      .from('connector_secrets')
+      .select('secret_value')
+      .eq('slug', connectorSlug)
+      .single();
+
+    if (data?.secret_value) {
+      // Map to the expected lowercase key name(s) for this connector
+      const envKeys = SECRET_ENV_MAP[connectorSlug] ?? [];
+      const result: Record<string, string> = {};
+      for (const key of envKeys) {
+        result[key.toLowerCase()] = data.secret_value;
+      }
+      if (Object.keys(result).length) return result;
+    }
+  } catch {
+    // silently fall through to env
+  }
+  return getSecretsFromEnv(connectorSlug);
 }
 
 // ─── Knowledge base context loader ───────────────────────────────────────────
@@ -200,7 +227,7 @@ async function runAgent(
             try {
               const r = await connector.call({
                 config: { ...(cfg?.config ?? {}), ...extraConfig },
-                secrets: getSecretsFromEnv(tu.name),
+                secrets: await getSecrets(tu.name, supabase),
                 input: tu.input,
               });
               output = r.content;

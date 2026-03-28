@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bot, Store } from 'lucide-react';
+import { Bot, BookOpen, Store } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const NAV = [
-  { href: '/',            icon: Bot,   label: 'Agents' },
-  { href: '/marketplace', icon: Store, label: 'Marketplace' },
+  { href: '/',            icon: Bot,      label: 'Agents' },
+  { href: '/knowledge',   icon: BookOpen, label: 'Knowledge Base' },
+  { href: '/marketplace', icon: Store,    label: 'Marketplace' },
 ];
 
 export default function Sidebar() {

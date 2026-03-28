@@ -18,18 +18,18 @@ export default function ClarificationItem({ clarification, onResolve, isResolvin
   return (
     <div className={cn(
       'rounded-lg border px-4 py-3 space-y-2',
-      isPending ? 'border-amber-200 bg-amber-50/30' : 'border-border bg-bg',
+      isPending ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200 bg-white',
     )}>
       <div className="flex items-start gap-2">
         <MessageCircleQuestion className={cn(
           'w-3.5 h-3.5 mt-0.5 shrink-0',
-          isPending ? 'text-amber-500' : 'text-text-subtle',
+          isPending ? 'text-amber-500' : 'text-gray-400',
         )} />
-        <p className="text-xs text-text leading-relaxed">{clarification.question}</p>
+        <p className="text-xs text-gray-900 leading-relaxed">{clarification.question}</p>
       </div>
 
       {clarification.context && (
-        <p className="text-[11px] text-text-subtle leading-relaxed pl-5.5 italic">
+        <p className="text-[11px] text-gray-400 leading-relaxed pl-5.5 italic">
           {clarification.context}
         </p>
       )}
@@ -66,7 +66,7 @@ export default function ClarificationItem({ clarification, onResolve, isResolvin
             className={cn(
               'text-[11px] font-medium px-2.5 py-1.5 rounded-md transition-colors',
               resolution.trim() && !isResolving
-                ? 'bg-accent hover:bg-accent-hover text-white'
+                ? 'bg-violet-600 hover:bg-violet-700 text-white'
                 : 'bg-gray-100 text-gray-300 cursor-not-allowed',
             )}
           >

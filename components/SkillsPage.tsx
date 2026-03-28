@@ -1,6 +1,12 @@
 'use client';
 
+import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
+import { Loader2, BookOpen, CircleDot, GitBranch, ArrowRight } from 'lucide-react';
+import type { ASDListItem, ASDStatus } from '@/lib/knowledge-types';
 import { cn } from '@/lib/cn';
+
+/* ── Hardcoded prompt-template skills ── */
 
 interface Skill {
   command: string;
@@ -126,6 +132,18 @@ const CATEGORY_COLOR: Record<string, { bg: string; text: string; border: string;
   Code:     { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100',dot: 'bg-emerald-400' },
 };
 
+/* ── ASD status badge styles ── */
+
+const ASD_STATUS_STYLE: Record<ASDStatus, string> = {
+  compiling:           'bg-blue-50 text-blue-600',
+  active:              'bg-emerald-50 text-emerald-700',
+  needs_clarification: 'bg-amber-50 text-amber-600',
+  needs_recompile:     'bg-red-50 text-red-600',
+  archived:            'bg-gray-100 text-gray-500',
+};
+
+/* ── Prompt template card (existing) ── */
+
 function SkillCard({ skill }: { skill: Skill }) {
   const c = CATEGORY_COLOR[skill.category] ?? CATEGORY_COLOR.Research;
   return (
@@ -164,19 +182,132 @@ function SkillCard({ skill }: { skill: Skill }) {
   );
 }
 
+/* ── SOP-derived skill card (from Knowledge Base) ── */
+
+function SOPSkillCard({ asd }: { asd: ASDListItem }) {
+  const coverage = asd.automation_coverage_score ?? 0;
+  const pct = Math.round(coverage * 100);
+
+  return (
+    <Link
+      href="/knowledge"
+      className="group bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-3 hover:border-violet-600/40 hover:shadow-sm transition-all duration-150"
+    >
+      {/* top row */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <BookOpen className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+          <p className="font-semibold text-sm text-gray-900 leading-tight">{asd.skill_id}</p>
+        </div>
+        <span className={cn('text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0', ASD_STATUS_STYLE[asd.status])}>
+          {asd.status}
+        </span>
+      </div>
+
+      {/* description */}
+      <p className="text-xs text-gray-500 leading-relaxed line-clamp-2 flex-1">
+        {asd.description || 'Agent skill compiled from SOP'}
+      </p>
+
+      {/* stats */}
+      <div className="flex items-center gap-4 text-xs text-gray-400">
+        <span className="flex items-center gap-1">
+          <CircleDot className="w-3 h-3" />
+          v{asd.current_version}
+        </span>
+        <span className="flex items-center gap-1">
+          <GitBranch className="w-3 h-3" />
+          {asd.status === 'compiling' ? '...' : 'View graph'}
+        </span>
+      </div>
+
+      {/* coverage bar */}
+      <div className="pt-2 border-t border-gray-100">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[10px] text-gray-400">Automation coverage</span>
+          <span className="text-[11px] font-semibold text-gray-900 tabular-nums">{pct}%</span>
+        </div>
+        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className={cn(
+              'h-full rounded-full transition-all duration-500',
+              pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-400' : 'bg-red-400',
+            )}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+/* ── Main page ── */
+
 export default function SkillsPage() {
+  const { data: asds = [], isLoading: asdsLoading } = useQuery<ASDListItem[]>({
+    queryKey: ['asds'],
+    queryFn: async () => {
+      const res = await fetch('/api/knowledge/asds');
+      const json = await res.json();
+      return Array.isArray(json) ? json : [];
+    },
+  });
+
+  const activeAsds = asds.filter(a => a.status !== 'archived');
+
   return (
     <div className="flex flex-col h-full bg-white overflow-y-auto">
       {/* Header */}
       <div className="px-8 py-5 border-b border-gray-100 shrink-0">
         <h1 className="text-base font-semibold text-gray-900">Skills</h1>
         <p className="text-sm text-gray-400 mt-0.5">
-          System prompt templates — use <code className="text-xs font-mono bg-gray-100 px-1 py-0.5 rounded">/<span>skill</span></code> in the agent system prompt to activate
+          Agent capabilities from compiled SOPs and prompt templates
         </p>
       </div>
 
-      {/* Gallery */}
       <div className="px-8 py-6 space-y-8">
+        {/* SOP-derived skills section */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-violet-400" />
+              <h2 className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
+                SOP-Derived Skills
+              </h2>
+            </div>
+            <Link
+              href="/knowledge"
+              className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-700 font-medium transition-colors"
+            >
+              Manage in Knowledge Base
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {asdsLoading ? (
+            <div className="flex items-center justify-center h-20">
+              <Loader2 className="w-4 h-4 text-gray-300 animate-spin" />
+            </div>
+          ) : activeAsds.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-24 border border-dashed border-gray-200 rounded-xl">
+              <p className="text-sm text-gray-400">No SOP-derived skills yet</p>
+              <Link
+                href="/knowledge"
+                className="text-xs text-violet-600 hover:text-violet-700 font-medium mt-1 transition-colors"
+              >
+                Upload an SOP to get started
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {activeAsds.map(asd => (
+                <SOPSkillCard key={asd.id} asd={asd} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Prompt template skills (existing hardcoded) */}
         {CATEGORIES.map(cat => {
           const c = CATEGORY_COLOR[cat];
           return (

@@ -84,16 +84,16 @@ export default function KnowledgeBasePage() {
   const isUploading = uploadText.isPending || uploadFile.isPending;
 
   return (
-    <div className="flex flex-col h-full bg-bg">
+    <div className="flex flex-col h-full bg-white">
       {/* header */}
-      <div className="px-8 py-5 border-b border-border flex items-center justify-between shrink-0">
+      <div className="px-8 py-5 border-b border-gray-200 flex items-center justify-between shrink-0">
         <div>
           <h1 className="text-base font-semibold">Knowledge Base</h1>
-          <p className="text-sm text-text-muted mt-0.5">Upload SOPs and compile agent skill documents</p>
+          <p className="text-sm text-gray-500 mt-0.5">Upload SOPs and compile agent skill documents</p>
         </div>
         <button
           onClick={() => setUploadOpen(true)}
-          className="px-3.5 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-lg transition-colors"
+          className="px-3.5 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-lg transition-colors"
         >
           Upload SOP
         </button>
@@ -109,7 +109,7 @@ export default function KnowledgeBasePage() {
           <div className="space-y-8">
             {/* Documents section */}
             <section>
-              <h2 className="text-xs font-semibold text-text-subtle uppercase tracking-widest mb-4">Documents</h2>
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Documents</h2>
               {sopsLoading ? (
                 <div className="flex items-center justify-center h-20">
                   <Loader2 className="w-4 h-4 text-gray-300 animate-spin" />
@@ -125,15 +125,15 @@ export default function KnowledgeBasePage() {
 
             {/* Agent Skills section */}
             <section>
-              <h2 className="text-xs font-semibold text-text-subtle uppercase tracking-widest mb-4">Agent Skills</h2>
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Agent Skills</h2>
               {asdsLoading ? (
                 <div className="flex items-center justify-center h-20">
                   <Loader2 className="w-4 h-4 text-gray-300 animate-spin" />
                 </div>
               ) : asds.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-32 text-center">
-                  <p className="text-sm text-text-muted">No agent skills yet</p>
-                  <p className="text-xs text-text-subtle mt-1">Compile a document to generate an agent skill</p>
+                  <p className="text-sm text-gray-500">No agent skills yet</p>
+                  <p className="text-xs text-gray-400 mt-1">Compile a document to generate an agent skill</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

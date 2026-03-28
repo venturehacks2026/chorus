@@ -22,8 +22,8 @@ export default function SOPTable({ sops, compilingSopIds, onCompile }: Props) {
   if (sops.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-32 text-center">
-        <p className="text-sm text-text-muted">No documents uploaded yet</p>
-        <p className="text-xs text-text-subtle mt-1">Upload an SOP to get started</p>
+        <p className="text-sm text-gray-500">No documents uploaded yet</p>
+        <p className="text-xs text-gray-400 mt-1">Upload an SOP to get started</p>
       </div>
     );
   }

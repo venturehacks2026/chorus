@@ -32,23 +32,23 @@ export default function ASDCard({ asd, onClick }: Props) {
   return (
     <button
       onClick={onClick}
-      className="group text-left bg-bg border border-border rounded-xl p-5 hover:border-accent/40 hover:shadow-sm transition-all duration-150 flex flex-col gap-3"
+      className="group text-left bg-white border border-gray-200 rounded-xl p-5 hover:border-violet-600/40 hover:shadow-sm transition-all duration-150 flex flex-col gap-3"
     >
       {/* top row: title + status */}
       <div className="flex items-start justify-between gap-2">
-        <p className="font-semibold text-sm text-text leading-tight">{asd.skill_id}</p>
+        <p className="font-semibold text-sm text-gray-900 leading-tight">{asd.skill_id}</p>
         <span className={cn('text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0', STATUS_STYLE[asd.status])}>
           {STATUS_LABEL[asd.status]}
         </span>
       </div>
 
       {/* description */}
-      <p className="text-xs text-text-muted leading-relaxed line-clamp-2 flex-1">
+      <p className="text-xs text-gray-500 leading-relaxed line-clamp-2 flex-1">
         {asd.description || 'Agent skill document compiled from SOP'}
       </p>
 
       {/* stats */}
-      <div className="flex items-center gap-4 text-xs text-text-subtle">
+      <div className="flex items-center gap-4 text-xs text-gray-400">
         <span className="flex items-center gap-1">
           <CircleDot className="w-3 h-3" />
           v{asd.current_version}
@@ -60,10 +60,10 @@ export default function ASDCard({ asd, onClick }: Props) {
       </div>
 
       {/* coverage bar */}
-      <div className="pt-2 border-t border-border">
+      <div className="pt-2 border-t border-gray-200">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] text-text-subtle">Automation coverage</span>
-          <span className="text-[11px] font-semibold text-text tabular-nums">{pct}%</span>
+          <span className="text-[10px] text-gray-400">Automation coverage</span>
+          <span className="text-[11px] font-semibold text-gray-900 tabular-nums">{pct}%</span>
         </div>
         <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
           <div

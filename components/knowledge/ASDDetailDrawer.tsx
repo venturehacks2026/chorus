@@ -17,7 +17,7 @@ const NODE_STYLE: Record<NodeType, string> = {
 };
 
 const EDGE_STYLE: Record<EdgeType, string> = {
-  sequential:    'text-text-muted',
+  sequential:    'text-gray-500',
   true_branch:   'text-emerald-600',
   false_branch:  'text-red-500',
   error_handler: 'text-amber-500',
@@ -89,11 +89,11 @@ export default function ASDDetailDrawer({ asdId, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex" onClick={onClose}>
       <div className="flex-1" />
       <div
-        className="w-[28rem] h-full bg-bg border-l border-border flex flex-col shadow-xl"
+        className="w-[28rem] h-full bg-white border-l border-gray-200 flex flex-col shadow-xl"
         onClick={e => e.stopPropagation()}
       >
         {/* header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div>
               <p className="font-semibold text-sm truncate">{asd?.skill_id ?? 'Loading…'}</p>
@@ -102,14 +102,14 @@ export default function ASDDetailDrawer({ asdId, onClose }: Props) {
                   <span className={cn('text-[10px] font-medium px-2 py-0.5 rounded-full', STATUS_STYLE[asd.status])}>
                     {asd.status}
                   </span>
-                  <span className="text-[11px] text-text-subtle">v{asd.current_version}</span>
+                  <span className="text-[11px] text-gray-400">v{asd.current_version}</span>
                 </div>
               )}
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-bg-muted text-text-subtle hover:text-text transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -125,15 +125,15 @@ export default function ASDDetailDrawer({ asdId, onClose }: Props) {
             <>
               {/* description */}
               {asd.description && (
-                <p className="text-sm text-text-muted leading-relaxed">{asd.description}</p>
+                <p className="text-sm text-gray-500 leading-relaxed">{asd.description}</p>
               )}
 
               {/* coverage */}
               <div>
-                <p className="text-xs font-medium text-text-subtle uppercase tracking-widest mb-3">Coverage</p>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">Coverage</p>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs text-text-muted">Automation coverage</span>
-                  <span className="text-sm font-semibold text-text tabular-nums">{pct}%</span>
+                  <span className="text-xs text-gray-500">Automation coverage</span>
+                  <span className="text-sm font-semibold text-gray-900 tabular-nums">{pct}%</span>
                 </div>
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div
@@ -149,23 +149,23 @@ export default function ASDDetailDrawer({ asdId, onClose }: Props) {
               {/* nodes */}
               {nodes.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-text-subtle uppercase tracking-widest mb-3">
-                    Nodes <span className="text-text-subtle font-normal">({nodes.length})</span>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">
+                    Nodes <span className="text-gray-400 font-normal">({nodes.length})</span>
                   </p>
                   <div className="space-y-1.5">
                     {nodes.sort((a, b) => a.position_index - b.position_index).map(node => (
-                      <div key={node.id} className="flex items-start gap-2 bg-bg-subtle border border-border rounded-lg px-3 py-2">
+                      <div key={node.id} className="flex items-start gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
                         <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 mt-0.5', NODE_STYLE[node.type])}>
                           {node.type}
                         </span>
                         <div className="min-w-0">
-                          <p className="text-xs font-medium text-text font-mono">{node.node_id}</p>
+                          <p className="text-xs font-medium text-gray-900 font-mono">{node.node_id}</p>
                           {node.description && (
-                            <p className="text-[11px] text-text-muted leading-relaxed mt-0.5 line-clamp-2">{node.description}</p>
+                            <p className="text-[11px] text-gray-500 leading-relaxed mt-0.5 line-clamp-2">{node.description}</p>
                           )}
                         </div>
                         {node.confidence_score != null && (
-                          <span className="text-[10px] text-text-subtle tabular-nums shrink-0 ml-auto">
+                          <span className="text-[10px] text-gray-400 tabular-nums shrink-0 ml-auto">
                             {Math.round(node.confidence_score * 100)}%
                           </span>
                         )}
@@ -178,17 +178,17 @@ export default function ASDDetailDrawer({ asdId, onClose }: Props) {
               {/* edges */}
               {edges.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-text-subtle uppercase tracking-widest mb-3">
-                    Edges <span className="text-text-subtle font-normal">({edges.length})</span>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">
+                    Edges <span className="text-gray-400 font-normal">({edges.length})</span>
                   </p>
                   <div className="space-y-1">
                     {edges.map(edge => (
-                      <div key={edge.id} className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-bg-subtle border border-border rounded-md">
-                        <span className="font-mono text-text">{edge.from_node_id}</span>
+                      <div key={edge.id} className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-md">
+                        <span className="font-mono text-gray-900">{edge.from_node_id}</span>
                         <ArrowRight className={cn('w-3 h-3 shrink-0', EDGE_STYLE[edge.edge_type])} />
-                        <span className="font-mono text-text">{edge.to_node_id}</span>
+                        <span className="font-mono text-gray-900">{edge.to_node_id}</span>
                         {edge.condition_label && (
-                          <span className="text-[10px] text-text-subtle ml-auto italic">{edge.condition_label}</span>
+                          <span className="text-[10px] text-gray-400 ml-auto italic">{edge.condition_label}</span>
                         )}
                       </div>
                     ))}
@@ -199,19 +199,19 @@ export default function ASDDetailDrawer({ asdId, onClose }: Props) {
               {/* contracts */}
               {contracts.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-text-subtle uppercase tracking-widest mb-3">
-                    Contracts <span className="text-text-subtle font-normal">({contracts.length})</span>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">
+                    Contracts <span className="text-gray-400 font-normal">({contracts.length})</span>
                   </p>
                   <div className="space-y-2">
                     {contracts.map(c => (
-                      <div key={c.id} className="border border-border rounded-lg px-3 py-2.5 space-y-1">
+                      <div key={c.id} className="border border-gray-200 rounded-lg px-3 py-2.5 space-y-1">
                         <div className="flex items-center gap-2">
                           <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded', CONTRACT_STYLE[c.contract_type])}>
                             {c.contract_type}
                           </span>
-                          <span className="text-xs font-medium text-text">{c.contract_name}</span>
+                          <span className="text-xs font-medium text-gray-900">{c.contract_name}</span>
                         </div>
-                        <p className="text-[11px] text-text-muted leading-relaxed">{c.description}</p>
+                        <p className="text-[11px] text-gray-500 leading-relaxed">{c.description}</p>
                       </div>
                     ))}
                   </div>
@@ -221,8 +221,8 @@ export default function ASDDetailDrawer({ asdId, onClose }: Props) {
               {/* clarifications */}
               {clarifications.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-text-subtle uppercase tracking-widest mb-3">
-                    Clarifications <span className="text-text-subtle font-normal">({clarifications.length})</span>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">
+                    Clarifications <span className="text-gray-400 font-normal">({clarifications.length})</span>
                   </p>
                   <div className="space-y-2">
                     {clarifications.map(cl => (

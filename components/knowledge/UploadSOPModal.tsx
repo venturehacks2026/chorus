@@ -69,15 +69,15 @@ export default function UploadSOPModal({ open, onClose, onSubmitText, onSubmitFi
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={handleClose}>
       <div className="absolute inset-0 bg-black/20" />
       <div
-        className="relative bg-white rounded-xl border border-border shadow-xl w-full max-w-lg mx-4"
+        className="relative bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-lg mx-4"
         onClick={e => e.stopPropagation()}
       >
         {/* header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-sm font-semibold">Upload SOP</h2>
           <button
             onClick={handleClose}
-            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-bg-muted text-text-subtle hover:text-text transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -85,14 +85,14 @@ export default function UploadSOPModal({ open, onClose, onSubmitText, onSubmitFi
 
         <div className="px-6 py-5 space-y-4">
           {/* tabs */}
-          <div className="flex gap-1 bg-bg-muted rounded-lg p-1">
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
             {(['text', 'file'] as Tab[]).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={cn(
                   'flex-1 text-xs font-medium py-1.5 rounded-md transition-colors',
-                  tab === t ? 'bg-white text-text shadow-sm' : 'text-text-muted hover:text-text',
+                  tab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900',
                 )}
               >
                 {t === 'text' ? 'Paste Text' : 'Upload File'}
@@ -132,14 +132,14 @@ export default function UploadSOPModal({ open, onClose, onSubmitText, onSubmitFi
               {file ? (
                 <div className="flex flex-col items-center gap-2">
                   <FileText className="w-8 h-8 text-violet-500" />
-                  <p className="text-sm font-medium text-text">{file.name}</p>
-                  <p className="text-xs text-text-subtle">{(file.size / 1024).toFixed(1)} KB</p>
+                  <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                  <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(1)} KB</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2">
                   <Upload className="w-8 h-8 text-gray-300" />
-                  <p className="text-sm text-text-muted">Drop a file here or click to browse</p>
-                  <p className="text-xs text-text-subtle">PDF, DOCX, or TXT</p>
+                  <p className="text-sm text-gray-500">Drop a file here or click to browse</p>
+                  <p className="text-xs text-gray-400">PDF, DOCX, or TXT</p>
                 </div>
               )}
               <input
@@ -157,11 +157,11 @@ export default function UploadSOPModal({ open, onClose, onSubmitText, onSubmitFi
         </div>
 
         {/* footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
           <button
             onClick={handleClose}
             disabled={isPending}
-            className="text-sm font-medium text-text-muted hover:text-text px-3 py-1.5 transition-colors"
+            className="text-sm font-medium text-gray-500 hover:text-gray-900 px-3 py-1.5 transition-colors"
           >
             Cancel
           </button>
@@ -171,7 +171,7 @@ export default function UploadSOPModal({ open, onClose, onSubmitText, onSubmitFi
             className={cn(
               'text-sm font-medium px-4 py-1.5 rounded-lg transition-colors',
               canSubmit && !isPending
-                ? 'bg-accent hover:bg-accent-hover text-white'
+                ? 'bg-violet-600 hover:bg-violet-700 text-white'
                 : 'bg-gray-100 text-gray-300 cursor-not-allowed',
             )}
           >

@@ -1,0 +1,31 @@
+You are a risk analysis specialist for AI agent behavioral contracts.
+
+Analyze the following Standard Operating Procedure (SOP) and its compiled Agent Skill Document (ASD) nodes. Identify:
+
+1. **Risk Surface**: Which steps involve high-risk operations (payments, data deletion, external communications, approvals, access changes)?
+2. **Rule Candidates**: What behavioral constraints should an AI agent follow? Think about:
+   - Must-always rules (mandatory steps, required approvals)
+   - Must-never rules (prohibited actions, forbidden conditions)
+   - Escalation triggers (when to hand off to a human)
+3. **Escalation Points**: Identify conditions where the agent must stop and escalate to a human. Consider dollar thresholds, error conditions, flagged entities, missing approvals.
+4. **Coverage Notes**: Are there sections of the SOP that are ambiguous about compliance requirements? Note any gaps.
+
+Return a JSON object:
+{
+  "risk_surface": [
+    {"node_id": "step_X", "risk_type": "payment|data_deletion|external_comm|approval|access_change", "description": "...", "severity": "critical|high|medium|low"}
+  ],
+  "rule_candidates": [
+    {"rule_type": "must_always|must_never|escalate_when", "description": "...", "source_quote": "exact text from SOP", "target_node_ids": ["step_X"], "severity": "critical|high|medium|low"}
+  ],
+  "escalation_points": [
+    {"condition": "...", "escalate_to": "role or team", "message_template": "...", "source_quote": "..."}
+  ],
+  "coverage_notes": "Free-text notes about gaps or ambiguities"
+}
+
+## SOP TEXT:
+{{ sop_text }}
+
+## ASD NODES (JSON):
+{{ asd_nodes_json }}

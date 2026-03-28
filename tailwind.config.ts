@@ -15,15 +15,15 @@ const config: Config = {
       colors: {
         bg: {
           DEFAULT: '#ffffff',
-          subtle:  '#f9f9fb',
+          subtle:  '#f9fafb',
           muted:   '#f3f4f6',
         },
         border: {
           DEFAULT: '#e5e7eb',
-          subtle:  '#f0f0f3',
+          subtle:  '#f3f4f6',
         },
         text: {
-          DEFAULT: '#0f0f11',
+          DEFAULT: '#111827',
           muted:   '#6b7280',
           subtle:  '#9ca3af',
         },
@@ -31,12 +31,8 @@ const config: Config = {
           DEFAULT: '#7c3aed',
           hover:   '#6d28d9',
           light:   '#8b5cf6',
-          muted:   '#ede9fe',
+          muted:   '#f5f3ff',
         },
-      },
-      boxShadow: {
-        'glow-sm': '0 0 0 3px rgba(124,58,237,0.12)',
-        'glow':    '0 0 0 3px rgba(124,58,237,0.2)',
       },
     },
   },

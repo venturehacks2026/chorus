@@ -5,33 +5,31 @@
 @layer base {
   * { box-sizing: border-box; }
 
-  body {
-    @apply bg-bg text-text font-sans antialiased;
-  }
+  body { @apply bg-white text-text font-sans antialiased; }
 
-  ::selection { background: rgba(124,58,237,0.15); }
+  ::selection { background: rgba(124, 58, 237, 0.12); }
 
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
-  ::-webkit-scrollbar-thumb:hover { @apply bg-text-subtle; }
+  ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
 }
 
-/* React Flow — white/purple palette */
-.react-flow__background { background: #f9f9fb !important; }
+/* React Flow */
+.react-flow__background { background: #f9fafb !important; }
 .react-flow__controls {
   background: #ffffff !important;
   border: 1px solid #e5e7eb !important;
-  border-radius: 8px !important;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
 }
 .react-flow__controls-button {
   background: #ffffff !important;
   border-color: #e5e7eb !important;
-  color: #6b7280 !important;
+  color: #9ca3af !important;
 }
-.react-flow__controls-button:hover { background: #f3f4f6 !important; color: #0f0f11 !important; }
-.react-flow__minimap { background: #ffffff !important; border: 1px solid #e5e7eb !important; border-radius: 8px !important; }
-.react-flow__edge-path { stroke: #d1d5db !important; stroke-width: 1.5 !important; }
+.react-flow__controls-button:hover { background: #f9fafb !important; color: #111827 !important; }
+.react-flow__minimap { background: #ffffff !important; border: 1px solid #e5e7eb !important; border-radius: 10px !important; }
+.react-flow__edge-path { stroke: #c4b5fd !important; stroke-width: 1.5 !important; }
 .react-flow__edge.selected .react-flow__edge-path { stroke: #7c3aed !important; }
-.react-flow__handle { background: #7c3aed !important; border-color: #ffffff !important; }
+.react-flow__handle { background: #7c3aed !important; border-color: #ffffff !important; width: 8px !important; height: 8px !important; }

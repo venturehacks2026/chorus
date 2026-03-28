@@ -1,7 +1,5 @@
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
-
-const IsometricCubes = dynamic(() => import('@/components/IsometricCubes'), { ssr: false });
+import IsometricCubesClient from '@/components/IsometricCubesClient';
 
 export default function LandingPage() {
   return (
@@ -65,7 +63,7 @@ export default function LandingPage() {
 
           {/* Right: Three.js canvas */}
           <div className="flex-1 relative">
-            <IsometricCubes />
+            <IsometricCubesClient />
           </div>
         </div>
 

@@ -6,7 +6,7 @@ import { Bot, BookOpen, Store, Sparkles, Database } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const NAV = [
-  { href: '/',            icon: Bot,      label: 'Agents' },
+  { href: '/agents',      icon: Bot,      label: 'Agents' },
   { href: '/knowledge',   icon: BookOpen, label: 'Knowledge' },
   { href: '/skills',      icon: Sparkles, label: 'Skills' },
   { href: '/marketplace', icon: Store,    label: 'Marketplace' },
@@ -27,8 +27,8 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="flex flex-col gap-0.5 px-3 py-3">
         {NAV.map(({ href, icon: Icon, label }) => {
-          const active = href === '/'
-            ? pathname === '/' || pathname.startsWith('/workflows')
+          const active = href === '/agents'
+            ? pathname === '/agents' || pathname.startsWith('/workflows')
             : pathname.startsWith(href);
           return (
             <Link

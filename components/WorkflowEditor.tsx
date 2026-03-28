@@ -165,7 +165,7 @@ export default function WorkflowEditor() {
     <div className="flex flex-col h-full bg-white">
       {/* Toolbar */}
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 bg-white shrink-0">
-        <Link href="/" className="text-sm text-gray-400 hover:text-gray-700 transition-colors">
+        <Link href="/agents" className="text-sm text-gray-400 hover:text-gray-700 transition-colors">
           Agents
         </Link>
         <span className="text-gray-300 text-sm">/</span>

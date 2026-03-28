@@ -48,10 +48,10 @@ export default function LandingPage() {
           {/* Left text — narrower so canvas gets more room */}
           <div className="relative z-10 flex flex-col justify-center w-[440px] shrink-0 px-16 pb-10">
             <h1 className="i1 text-[46px] font-bold tracking-tight text-gray-900 leading-[1.06] mb-2 whitespace-nowrap">
-              Build AI
+              Aligned AI
             </h1>
             <h1 className="i2 text-[46px] font-bold tracking-tight leading-[1.06] mb-6 whitespace-nowrap">
-              workflows <span className="text-violet-600">easily.</span>
+              Automation<span className="text-violet-600">.</span>
             </h1>
 
             <p className="i3 text-[15px] text-gray-400 leading-relaxed mb-8 max-w-[300px]">

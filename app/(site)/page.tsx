@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import IsometricCubesClient from '@/components/IsometricCubesClient';
+import IsometricSVG from '@/components/IsometricSVG';
 
 export default function LandingPage() {
   return (
@@ -46,17 +46,17 @@ export default function LandingPage() {
         <div className="flex-1 flex overflow-hidden">
 
           {/* Left text — narrower so canvas gets more room */}
-          <div className="relative z-10 flex flex-col justify-center w-[400px] shrink-0 px-12 pb-10">
-            <h1 className="i1 text-[50px] font-bold tracking-tight text-gray-900 leading-[1.06] mb-2">
+          <div className="relative z-10 flex flex-col justify-center w-[440px] shrink-0 px-16 pb-10">
+            <h1 className="i1 text-[46px] font-bold tracking-tight text-gray-900 leading-[1.06] mb-2 whitespace-nowrap">
               Build AI
             </h1>
-            <h1 className="i2 text-[50px] font-bold tracking-tight leading-[1.06] mb-6">
+            <h1 className="i2 text-[46px] font-bold tracking-tight leading-[1.06] mb-6 whitespace-nowrap">
               workflows <span className="text-violet-600">easily.</span>
             </h1>
 
             <p className="i3 text-[15px] text-gray-400 leading-relaxed mb-8 max-w-[300px]">
               Agent pipelines, behavioral contracts,<br />
-              and full observability — in one place.
+              and full observability in one place.
             </p>
 
             <div className="i4">
@@ -79,7 +79,7 @@ export default function LandingPage() {
               className="absolute inset-y-0 left-0 w-24 z-10 pointer-events-none"
               style={{ background: 'linear-gradient(to right, white, transparent)' }}
             />
-            <IsometricCubesClient />
+            <IsometricSVG />
           </div>
         </div>
 

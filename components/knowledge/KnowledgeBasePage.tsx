@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react';
 import type { SOPListItem, ASDListItem } from '@/lib/knowledge-types';
 import SOPTable from './SOPTable';
 import ASDCard from './ASDCard';
-import ASDDetailDrawer from './ASDDetailDrawer';
+import ASDDetailModal from './ASDDetailModal';
 import UploadSOPModal from './UploadSOPModal';
 import SOPViewerModal from './SOPViewerModal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
@@ -185,7 +185,7 @@ export default function KnowledgeBasePage() {
       )}
 
       {selectedAsdId && (
-        <ASDDetailDrawer asdId={selectedAsdId} onClose={() => setSelectedAsdId(null)} />
+        <ASDDetailModal asdId={selectedAsdId} onClose={() => setSelectedAsdId(null)} />
       )}
     </div>
   );

@@ -6,13 +6,13 @@ import { Search, Globe, Brain, Code, FileText, Database, Zap, X, Key, ArrowUpRig
 import type { Connector } from '@/lib/types';
 import { cn } from '@/lib/cn';
 
-const CONNECTOR_META: Record<string, { icon: React.ElementType; color: string; category: string; popular?: boolean }> = {
-  'web-search':     { icon: Globe,    color: 'text-blue-500',    category: 'Research',   popular: true },
-  'perplexity':     { icon: Brain,    color: 'text-violet-500',  category: 'Research',   popular: true },
-  'code-executor':  { icon: Code,     color: 'text-emerald-500', category: 'Dev Tools',  popular: true },
-  'file-reader':    { icon: FileText, color: 'text-amber-500',   category: 'Storage' },
-  'memory':         { icon: Database, color: 'text-rose-500',    category: 'Memory' },
-  'http':           { icon: Zap,      color: 'text-cyan-500',    category: 'Integrations' },
+const CONNECTOR_META: Record<string, { icon: React.ElementType; iconColor: string; iconBg: string; category: string; popular?: boolean }> = {
+  'web-search':     { icon: Globe,    iconColor: 'text-blue-500',    iconBg: 'bg-blue-50',    category: 'Research',      popular: true },
+  'perplexity':     { icon: Brain,    iconColor: 'text-violet-500',  iconBg: 'bg-violet-50',  category: 'Research',      popular: true },
+  'code-executor':  { icon: Code,     iconColor: 'text-emerald-500', iconBg: 'bg-emerald-50', category: 'Dev Tools',     popular: true },
+  'file-reader':    { icon: FileText, iconColor: 'text-amber-500',   iconBg: 'bg-amber-50',   category: 'Storage' },
+  'memory':         { icon: Database, iconColor: 'text-rose-500',    iconBg: 'bg-rose-50',    category: 'Memory' },
+  'http':           { icon: Zap,      iconColor: 'text-cyan-500',    iconBg: 'bg-cyan-50',    category: 'Integrations' },
 };
 
 const MOCK_USAGE = {
@@ -24,7 +24,16 @@ const MOCK_USAGE = {
   'http':          [1,  2,  3,  3,  5,  4,  6],
 };
 
-function Sparkline({ values, color }: { values: number[]; color: string }) {
+const ICON_COLOR_HEX: Record<string, string> = {
+  'text-blue-500':   '#3b82f6',
+  'text-violet-500': '#8b5cf6',
+  'text-emerald-500':'#10b981',
+  'text-amber-500':  '#f59e0b',
+  'text-rose-500':   '#f43f5e',
+  'text-cyan-500':   '#06b6d4',
+};
+
+function Sparkline({ values, iconColor }: { values: number[]; iconColor: string }) {
   const max = Math.max(...values);
   const min = Math.min(...values);
   const range = max - min || 1;
@@ -35,15 +44,7 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
     const y = h - ((v - min) / range) * h;
     return `${x},${y}`;
   });
-  const colorMap: Record<string, string> = {
-    'text-blue-500':   '#3b82f6',
-    'text-violet-500': '#8b5cf6',
-    'text-emerald-500':'#10b981',
-    'text-amber-500':  '#f59e0b',
-    'text-rose-500':   '#f43f5e',
-    'text-cyan-500':   '#06b6d4',
-  };
-  const stroke = colorMap[color] ?? '#6366f1';
+  const stroke = ICON_COLOR_HEX[iconColor] ?? '#7c3aed';
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible">
       <polyline
@@ -69,7 +70,8 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
 function ConnectorCard({ c, onClick }: { c: Connector; onClick: () => void }) {
   const meta = CONNECTOR_META[c.slug];
   const Icon = meta?.icon ?? Zap;
-  const color = meta?.color ?? 'text-accent';
+  const iconColor = meta?.iconColor ?? 'text-accent';
+  const iconBg = meta?.iconBg ?? 'bg-accent-muted';
   const usage = MOCK_USAGE[c.slug as keyof typeof MOCK_USAGE] ?? [1, 1, 1, 1, 1, 1, 1];
   const totalRuns = usage.reduce((a, b) => a + b, 0);
 
@@ -80,8 +82,8 @@ function ConnectorCard({ c, onClick }: { c: Connector; onClick: () => void }) {
     >
       {/* top row */}
       <div className="flex items-start justify-between">
-        <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center bg-bg-muted', color.replace('text-', 'bg-').replace('500', '50').replace('bg-', 'bg-'))}>
-          <Icon className={cn('w-5 h-5', color)} strokeWidth={1.5} />
+        <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', iconBg)}>
+          <Icon className={cn('w-5 h-5', iconColor)} strokeWidth={1.5} />
         </div>
         {meta?.popular && (
           <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent-muted text-accent">
@@ -103,7 +105,7 @@ function ConnectorCard({ c, onClick }: { c: Connector; onClick: () => void }) {
       <div className="flex items-end justify-between pt-1 border-t border-border">
         <div>
           <p className="text-[10px] text-text-subtle mb-1">7-day usage</p>
-          <Sparkline values={usage} color={color} />
+          <Sparkline values={usage} iconColor={iconColor} />
         </div>
         <div className="text-right">
           <p className="text-base font-semibold text-text tabular-nums">{totalRuns}</p>
@@ -124,7 +126,8 @@ function ConnectorCard({ c, onClick }: { c: Connector; onClick: () => void }) {
 function ConnectorDrawer({ c, onClose }: { c: Connector; onClose: () => void }) {
   const meta = CONNECTOR_META[c.slug];
   const Icon = meta?.icon ?? Zap;
-  const color = meta?.color ?? 'text-accent';
+  const iconColor = meta?.iconColor ?? 'text-accent';
+  const iconBg = meta?.iconBg ?? 'bg-accent-muted';
   const usage = MOCK_USAGE[c.slug as keyof typeof MOCK_USAGE] ?? [1, 1, 1, 1, 1, 1, 1];
 
   return (
@@ -137,8 +140,8 @@ function ConnectorDrawer({ c, onClose }: { c: Connector; onClose: () => void }) 
         {/* header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-bg-muted flex items-center justify-center">
-              <Icon className={cn('w-5 h-5', color)} strokeWidth={1.5} />
+            <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center', iconBg)}>
+              <Icon className={cn('w-5 h-5', iconColor)} strokeWidth={1.5} />
             </div>
             <div>
               <p className="font-semibold text-sm">{c.name}</p>
@@ -168,7 +171,7 @@ function ConnectorDrawer({ c, onClose }: { c: Connector; onClose: () => void }) 
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center gap-1">
                     <div
-                      className={cn('w-full rounded-sm transition-all', color.replace('text-', 'bg-'))}
+                      className={cn('w-full rounded-sm transition-all', iconColor.replace('text-', 'bg-'))}
                       style={{ height: `${Math.max(pct, 8)}%`, opacity: 0.7 + (i / usage.length) * 0.3 }}
                     />
                     <span className="text-[9px] text-text-subtle">{days[i]}</span>

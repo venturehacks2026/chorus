@@ -6,7 +6,7 @@ import { Bot, Store } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const NAV = [
-  { href: '/', icon: Bot, label: 'Agents' },
+  { href: '/',           icon: Bot,   label: 'Agents' },
   { href: '/marketplace', icon: Store, label: 'Marketplace' },
 ];
 
@@ -14,11 +14,15 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-52 shrink-0 border-r border-border flex flex-col bg-bg">
-      <div className="px-4 h-12 flex items-center border-b border-border">
-        <span className="text-sm font-semibold">Chorus</span>
+    <aside className="w-56 shrink-0 border-r border-border flex flex-col bg-bg">
+      {/* Logo */}
+      <div className="px-5 h-14 flex items-center border-b border-border">
+        <span className="text-base font-bold tracking-tight text-text">Chorus</span>
+        <span className="ml-1.5 text-accent font-bold text-base">.</span>
       </div>
-      <nav className="flex flex-col gap-0.5 p-2">
+
+      {/* Nav */}
+      <nav className="flex flex-col gap-1 px-3 py-4">
         {NAV.map(({ href, icon: Icon, label }) => {
           const active = href === '/'
             ? pathname === '/' || pathname.startsWith('/workflows')
@@ -28,13 +32,13 @@ export default function Sidebar() {
               key={href}
               href={href}
               className={cn(
-                'flex items-center gap-2.5 px-3 py-1.5 text-sm rounded-md transition-colors',
+                'flex items-center gap-3 px-3 py-2.5 text-[15px] rounded-lg transition-colors font-medium',
                 active
-                  ? 'bg-accent-muted text-text font-medium'
-                  : 'text-text-muted hover:text-text hover:bg-bg-subtle',
+                  ? 'bg-accent-muted text-accent'
+                  : 'text-text-muted hover:text-text hover:bg-bg-muted',
               )}
             >
-              <Icon className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+              <Icon className="w-4 h-4 shrink-0" strokeWidth={active ? 2 : 1.75} />
               {label}
             </Link>
           );

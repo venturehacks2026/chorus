@@ -9,9 +9,7 @@
     @apply bg-bg text-text font-sans antialiased;
   }
 
-  ::selection {
-    background: rgba(213, 189, 175, 0.3);
-  }
+  ::selection { background: rgba(124,58,237,0.15); }
 
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -19,21 +17,21 @@
   ::-webkit-scrollbar-thumb:hover { @apply bg-text-subtle; }
 }
 
-/* React Flow — sand palette */
-.react-flow__background { background: #EDEDE9 !important; }
+/* React Flow — white/purple palette */
+.react-flow__background { background: #f9f9fb !important; }
 .react-flow__controls {
-  background: #F5EBE0 !important;
-  border: 1px solid #D6CCC2 !important;
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
   border-radius: 8px !important;
-  box-shadow: 0 1px 3px rgba(61,50,40,0.06) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
 }
 .react-flow__controls-button {
-  background: #F5EBE0 !important;
-  border-color: #D6CCC2 !important;
-  color: #7C6854 !important;
+  background: #ffffff !important;
+  border-color: #e5e7eb !important;
+  color: #6b7280 !important;
 }
-.react-flow__controls-button:hover { background: #E3D5CA !important; color: #3D3228 !important; }
-.react-flow__minimap { background: #F5EBE0 !important; border: 1px solid #D6CCC2 !important; }
-.react-flow__edge-path { stroke: #D6CCC2 !important; stroke-width: 1.5 !important; }
-.react-flow__edge.selected .react-flow__edge-path { stroke: #D5BDAF !important; }
-.react-flow__handle { background: #D5BDAF !important; border-color: #F5EBE0 !important; }
+.react-flow__controls-button:hover { background: #f3f4f6 !important; color: #0f0f11 !important; }
+.react-flow__minimap { background: #ffffff !important; border: 1px solid #e5e7eb !important; border-radius: 8px !important; }
+.react-flow__edge-path { stroke: #d1d5db !important; stroke-width: 1.5 !important; }
+.react-flow__edge.selected .react-flow__edge-path { stroke: #7c3aed !important; }
+.react-flow__handle { background: #7c3aed !important; border-color: #ffffff !important; }

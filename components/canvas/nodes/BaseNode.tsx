@@ -26,11 +26,21 @@ const SHAPE_CLASSES: Record<string, string> = {
 };
 
 function ContractBadge({ contracts }: { contracts: ContractOverlay[] }) {
+  if (contracts.length === 0) return null;
   const active = contracts.filter((c) => c.state === 'active');
-  if (active.length === 0) return null;
+  if (active.length > 0) {
+    return (
+      <div className="absolute -top-2 -right-2 min-w-[18px] h-[18px] rounded-full bg-violet-600 text-white text-[9px] font-bold flex items-center justify-center px-1 shadow-sm">
+        {active.length}
+      </div>
+    );
+  }
+  // Any contracts (draft, etc.) — show shield icon
   return (
-    <div className="absolute -top-2 -right-2 min-w-[18px] h-[18px] rounded-full bg-violet-600 text-white text-[9px] font-bold flex items-center justify-center px-1 shadow-sm">
-      {active.length}
+    <div className="absolute -top-2.5 -right-2.5 w-[22px] h-[22px] rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center shadow-sm">
+      <svg className="w-3 h-3 text-violet-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      </svg>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import type { Node, Edge } from '@xyflow/react';
-import type { ASDNode, ASDEdge } from '@/lib/knowledge-types';
+import type { ASDNode, ASDEdge, DerivedContract } from '@/lib/knowledge-types';
 import type {
   ASDNodeType,
   BaseNodeData,
@@ -7,6 +7,7 @@ import type {
   DecisionNodeData,
   HandoffNodeData,
   WaitNodeData,
+  ContractOverlay,
 } from '@/lib/types';
 
 /**
@@ -100,13 +101,39 @@ function buildActionData(node: ASDNode): ActionNodeData {
 }
 
 /**
+ * Build a map of node_id → ContractOverlay[] from DerivedContract scope_node_ids.
+ */
+function buildContractMap(contracts: DerivedContract[]): Map<string, ContractOverlay[]> {
+  const map = new Map<string, ContractOverlay[]>();
+  for (const c of contracts) {
+    if (!c.scope_node_ids) continue;
+    const overlay: ContractOverlay = {
+      contractId: c.id,
+      contractName: c.contract_name,
+      state: c.status,
+      ruleCount: 0,
+      ruleTypes: [c.contract_type === 'must_escalate' ? 'must_escalate' : c.contract_type as 'must_always' | 'must_never'],
+    };
+    for (const nodeId of c.scope_node_ids) {
+      const existing = map.get(nodeId) ?? [];
+      existing.push(overlay);
+      map.set(nodeId, existing);
+    }
+  }
+  return map;
+}
+
+/**
  * Convert knowledge-domain ASDNode[] and ASDEdge[] into ReactFlow Node[] and Edge[].
  * Positions are not set here — run through useGraphLayout() after calling this.
  */
 export function mapASDToFlowGraph(
   asdNodes: ASDNode[],
   asdEdges: ASDEdge[],
+  contracts?: DerivedContract[],
 ): { nodes: Node[]; edges: Edge[] } {
+  const contractMap = contracts ? buildContractMap(contracts) : new Map<string, ContractOverlay[]>();
+
   const nodes: Node[] = asdNodes
     .sort((a, b) => a.position_index - b.position_index)
     .map((node) => {
@@ -129,6 +156,9 @@ export function mapASDToFlowGraph(
         default:
           data = buildBaseData(node, rfType);
       }
+
+      // Attach contracts scoped to this node
+      data.contracts = contractMap.get(node.node_id) ?? [];
 
       return {
         id: node.node_id,

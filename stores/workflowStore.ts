@@ -14,8 +14,10 @@ interface WorkflowStore {
   edges: Edge[];
   selectedAgentId: string | null;
   workflowId: string | null;
+  isAnimating: boolean;
 
   loadGraph: (workflowId: string, graph: WorkflowGraph) => void;
+  loadGraphAnimated: (workflowId: string, graph: WorkflowGraph) => void;
   setEdges: (edges: Edge[]) => void;
   onNodesChange: (changes: NodeChange[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
@@ -25,30 +27,69 @@ interface WorkflowStore {
   toWorkflowGraph: () => WorkflowGraph;
 }
 
+let animationTimers: ReturnType<typeof setTimeout>[] = [];
+
+function buildNodes(graph: WorkflowGraph): Node[] {
+  return graph.agents.map((agent) => ({
+    id: agent.id,
+    type: 'agent',
+    position: agent.position ?? { x: 0, y: 0 },
+    data: agent as Record<string, unknown>,
+  }));
+}
+
+function buildEdges(graph: WorkflowGraph): Edge[] {
+  return graph.edges.map((e) => ({
+    id: e.id,
+    source: e.source_agent_id,
+    target: e.target_agent_id,
+    label: e.label,
+    type: 'smoothstep',
+    style: { stroke: '#7c3aed', strokeWidth: 1.5 },
+  }));
+}
+
 export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   nodes: [],
   edges: [],
   selectedAgentId: null,
   workflowId: null,
+  isAnimating: false,
 
   loadGraph: (workflowId, graph) => {
-    const nodes: Node[] = graph.agents.map((agent) => ({
-      id: agent.id,
-      type: 'agent',
-      position: agent.position ?? { x: 0, y: 0 },
-      data: agent as Record<string, unknown>,
-    }));
+    animationTimers.forEach(clearTimeout);
+    animationTimers = [];
+    set({ nodes: buildNodes(graph), edges: buildEdges(graph), workflowId, selectedAgentId: null, isAnimating: false });
+  },
 
-    const edges: Edge[] = graph.edges.map((e) => ({
-      id: e.id,
-      source: e.source_agent_id,
-      target: e.target_agent_id,
-      label: e.label,
-      type: 'smoothstep',
-      style: { stroke: '#7c3aed', strokeWidth: 1.5 },
-    }));
+  loadGraphAnimated: (workflowId, graph) => {
+    animationTimers.forEach(clearTimeout);
+    animationTimers = [];
 
-    set({ nodes, edges, workflowId, selectedAgentId: null });
+    const allNodes = buildNodes(graph);
+    const allEdges = buildEdges(graph);
+    const sorted = [...allNodes].sort((a, b) => a.position.x - b.position.x);
+
+    set({ nodes: [], edges: [], workflowId, selectedAgentId: null, isAnimating: true });
+
+    const STAGGER = 500;
+    const revealedIds = new Set<string>();
+
+    sorted.forEach((node, i) => {
+      const t = setTimeout(() => {
+        revealedIds.add(node.id);
+        const visibleEdges = allEdges.filter(
+          (e) => revealedIds.has(e.source) && revealedIds.has(e.target),
+        );
+        set({ nodes: sorted.slice(0, i + 1), edges: visibleEdges });
+
+        if (i === sorted.length - 1) {
+          const done = setTimeout(() => set({ isAnimating: false }), 300);
+          animationTimers.push(done);
+        }
+      }, STAGGER * (i + 1));
+      animationTimers.push(t);
+    });
   },
 
   setEdges: (edges) => set({ edges }),

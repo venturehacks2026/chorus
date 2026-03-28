@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState, useRef } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
@@ -20,8 +20,11 @@ type Panel = 'config' | 'contracts' | 'execution';
 
 export default function WorkflowEditor() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const id = params?.id;
   const loadGraph = useWorkflowStore((s) => s.loadGraph);
+  const loadGraphAnimated = useWorkflowStore((s) => s.loadGraphAnimated);
+  const isAnimating = useWorkflowStore((s) => s.isAnimating);
   const toWorkflowGraph = useWorkflowStore((s) => s.toWorkflowGraph);
   const workflowId = useWorkflowStore((s) => s.workflowId);
   const executionId = useExecutionStore((s) => s.executionId);
@@ -32,6 +35,9 @@ export default function WorkflowEditor() {
   const [panel, setPanel] = useState<Panel>('config');
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
+  const animatedRef = useRef(false);
+
+  const isNewWorkflow = searchParams?.get('new') === '1';
 
   const { data, isLoading } = useQuery({
     queryKey: ['workflows', id],
@@ -41,7 +47,12 @@ export default function WorkflowEditor() {
 
   useEffect(() => {
     if (data?.workflow && data.workflow.id !== workflowId) {
-      loadGraph(data.workflow.id, data.workflow.graph_json);
+      if (isNewWorkflow && !animatedRef.current) {
+        animatedRef.current = true;
+        loadGraphAnimated(data.workflow.id, data.workflow.graph_json);
+      } else {
+        loadGraph(data.workflow.id, data.workflow.graph_json);
+      }
     }
   }, [data?.workflow?.id]);
 
@@ -55,6 +66,24 @@ export default function WorkflowEditor() {
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [executionId]);
+
+  // Polling fallback: Supabase Realtime may not deliver updates if table
+  // replication isn't enabled. Poll every 3s while running so the UI always
+  // reflects the true backend status.
+  useEffect(() => {
+    if (executionStatus !== 'running' || !id) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/workflows/${id}`);
+        const json = await res.json() as { workflow: { status: string } };
+        const s = json?.workflow?.status;
+        if (s && s !== 'running') {
+          updateExecutionStatus(s as Execution['status']);
+        }
+      } catch { /* ignore network blips */ }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [executionStatus, id]);
 
   useEffect(() => {
     if (executionStatus === 'running') setPanel('execution');

@@ -47,7 +47,7 @@ export default function Dashboard() {
       }).then(r => r.json()),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['workflows'] });
-      if (data.workflow?.id) router.push(`/workflows/${data.workflow.id}`);
+      if (data.workflow?.id) router.push(`/workflows/${data.workflow.id}?new=1`);
     },
   });
 

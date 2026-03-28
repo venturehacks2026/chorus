@@ -33,3 +33,21 @@
 .react-flow__edge-path { stroke: #c4b5fd !important; stroke-width: 1.5 !important; }
 .react-flow__edge.selected .react-flow__edge-path { stroke: #7c3aed !important; }
 .react-flow__handle { background: #7c3aed !important; border-color: #ffffff !important; width: 8px !important; height: 8px !important; }
+
+/* Animated node ingestion */
+@keyframes nodeReveal {
+  0% { opacity: 0; transform: translateX(-24px) scale(0.92); }
+  60% { opacity: 1; transform: translateX(4px) scale(1.01); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+.react-flow__node { animation: nodeReveal 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes edgeDraw {
+  from { stroke-dashoffset: 200; }
+  to { stroke-dashoffset: 0; }
+}
+.react-flow__edge-path {
+  stroke-dasharray: 200;
+  stroke-dashoffset: 0;
+  animation: edgeDraw 0.6s ease-out both;
+}

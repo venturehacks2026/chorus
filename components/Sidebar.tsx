@@ -19,10 +19,10 @@ export default function Sidebar() {
   return (
     <aside className="w-56 shrink-0 border-r border-gray-100 flex flex-col bg-white">
       {/* Logo */}
-      <div className="px-5 h-16 flex items-center justify-center border-b border-gray-100">
+      <Link href="/" className="px-5 h-16 flex items-center justify-center border-b border-gray-100 hover:opacity-80 transition-opacity">
         <span className="text-[22px] font-bold tracking-tight text-gray-900">Chorus</span>
         <span className="ml-0.5 text-violet-600 font-bold text-[22px]">.</span>
-      </div>
+      </Link>
 
       {/* Nav */}
       <nav className="flex flex-col gap-0.5 px-3 py-3">

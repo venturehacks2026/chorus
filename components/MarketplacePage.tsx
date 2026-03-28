@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Globe, Brain, Code, FileText, Database, Zap, Key, Check, X, Eye, EyeOff, Plus } from 'lucide-react';
+import { Search, Globe, Brain, Code, FileText, Database, Zap, Key, Check, X, Eye, EyeOff, Plus, Rss, Link2 } from 'lucide-react';
 import type { Connector } from '@/lib/types';
 import { cn } from '@/lib/cn';
 
@@ -20,18 +20,26 @@ const CONNECTOR_META: Record<string, {
 }> = {
   'web-search':     { icon: Globe,    iconColor: 'text-blue-500',    iconBg: 'bg-blue-50',    category: 'Research',      popular: true,  secretKey: 'BRAVE_API_KEY',       secretLabel: 'Brave Search API Key',      secretPlaceholder: 'BSAxxxxxxxxxxxx…' },
   'perplexity':     { icon: Brain,    iconColor: 'text-violet-500',  iconBg: 'bg-violet-50',  category: 'Research',      popular: true,  secretKey: 'PERPLEXITY_API_KEY',  secretLabel: 'Perplexity API Key',        secretPlaceholder: 'pplx-xxxxxxxxxxxx…' },
+  'web-scraper':    { icon: Globe,    iconColor: 'text-sky-500',     iconBg: 'bg-sky-50',     category: 'Research',      popular: true  },
+  'rss-reader':     { icon: Rss,      iconColor: 'text-orange-500',  iconBg: 'bg-orange-50',  category: 'Research',      popular: true  },
+  'json-api':       { icon: Link2,    iconColor: 'text-teal-500',    iconBg: 'bg-teal-50',    category: 'Integrations',  popular: true  },
   'code-executor':  { icon: Code,     iconColor: 'text-emerald-500', iconBg: 'bg-emerald-50', category: 'Dev Tools',     popular: true  },
   'file-reader':    { icon: FileText, iconColor: 'text-amber-500',   iconBg: 'bg-amber-50',   category: 'Storage' },
   'memory':         { icon: Database, iconColor: 'text-rose-500',    iconBg: 'bg-rose-50',    category: 'Memory' },
+  'data-store':     { icon: Database, iconColor: 'text-indigo-500',  iconBg: 'bg-indigo-50',  category: 'Storage',       popular: true  },
   'http':           { icon: Zap,      iconColor: 'text-cyan-500',    iconBg: 'bg-cyan-50',    category: 'Integrations',  secretKey: 'HTTP_BEARER_TOKEN',   secretLabel: 'Bearer Token (optional)', secretPlaceholder: 'Bearer …' },
 };
 
 const MOCK_USAGE: Record<string, number[]> = {
   'web-search':    [12, 19, 14, 28, 22, 35, 31],
   'perplexity':    [8,  14, 11, 18, 15, 22, 20],
+  'web-scraper':   [6,  10, 13, 17, 21, 25, 28],
+  'rss-reader':    [3,  5,  8,  11, 14, 18, 22],
+  'json-api':      [4,  7,  9,  13, 16, 19, 23],
   'code-executor': [5,  9,  12, 10, 17, 14, 19],
   'file-reader':   [3,  4,  6,  5,  8,  7,  9],
   'memory':        [2,  3,  4,  5,  4,  6,  8],
+  'data-store':    [4,  6,  8,  9,  12, 14, 17],
   'http':          [1,  2,  3,  3,  5,  4,  6],
 };
 
@@ -42,6 +50,10 @@ const ICON_COLOR_HEX: Record<string, string> = {
   'text-amber-500':   '#f59e0b',
   'text-rose-500':    '#f43f5e',
   'text-cyan-500':    '#06b6d4',
+  'text-sky-500':     '#0ea5e9',
+  'text-orange-500':  '#f97316',
+  'text-teal-500':    '#14b8a6',
+  'text-indigo-500':  '#6366f1',
 };
 
 // ─── Local key store (in-memory for demo; swap to localStorage or vault) ─────

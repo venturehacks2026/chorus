@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import {
   applyNodeChanges,
   applyEdgeChanges,
@@ -26,7 +27,9 @@ interface WorkflowStore {
   toWorkflowGraph: () => WorkflowGraph;
 }
 
-export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
+export const useWorkflowStore = create<WorkflowStore>()(
+  persist(
+  (set, get) => ({
   nodes: [],
   edges: [],
   selectedAgentId: null,
@@ -38,7 +41,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       const node: Node = {
         id: agent.id,
         type: 'agent',
-        position: agent.position ?? { x: 150 + state.nodes.length * 320, y: 200 },
+        position: agent.position ?? { x: 150 + state.nodes.length * 420, y: 200 },
         data: agent as Record<string, unknown>,
       };
       // Auto-connect to previous agent with smoothstep edge
@@ -113,4 +116,9 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       })),
     };
   },
-}));
+  }),
+  {
+    name: 'chorus-workflow',
+    partialize: (s) => ({ workflowId: s.workflowId }),
+  }
+));

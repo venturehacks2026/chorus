@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
-  X, Bot, Loader2, CheckCircle, XCircle, Clock, Wrench, Brain,
-  ArrowRight, ChevronDown, ChevronRight as ChevronR, Shield, Minus,
+  X, Loader2, CheckCircle, XCircle, Clock, Wrench, Brain,
+  ArrowRight, ChevronDown, ChevronRight as ChevronR, Shield, Minus, Database,
 } from 'lucide-react';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import { useExecutionStore } from '@/stores/executionStore';
@@ -14,78 +14,141 @@ import type {
 } from '@/lib/types';
 import { cn } from '@/lib/cn';
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * Detect and render inline code or full code blocks in a text string.
+ * Splits on ```lang\n…\n``` fences and `inline` ticks.
+ */
+function RichText({ text }: { text: string }) {
+  // First split on fenced code blocks
+  const parts = text.split(/(```[\s\S]*?```)/g);
+  return (
+    <span className="leading-relaxed">
+      {parts.map((part, i) => {
+        if (part.startsWith('```')) {
+          // Strip the fence markers and optional language tag
+          const inner = part.replace(/^```[^\n]*\n?/, '').replace(/```$/, '');
+          return (
+            <pre
+              key={i}
+              className="block mt-1.5 mb-1.5 p-2.5 rounded-lg bg-gray-950 text-emerald-300 text-[11px] font-mono whitespace-pre overflow-x-auto border border-gray-800"
+            >
+              {inner}
+            </pre>
+          );
+        }
+        // Handle inline `code` within this segment
+        const inline = part.split(/(`[^`]+`)/g);
+        return (
+          <span key={i}>
+            {inline.map((seg, j) => {
+              if (seg.startsWith('`') && seg.endsWith('`') && seg.length > 2) {
+                return (
+                  <code key={j} className="px-1 py-0.5 rounded bg-gray-100 text-violet-700 text-[11px] font-mono">
+                    {seg.slice(1, -1)}
+                  </code>
+                );
+              }
+              return <span key={j}>{seg}</span>;
+            })}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+// ─── LLM text accumulator ─────────────────────────────────────────────────────
+
+/**
+ * Takes the list of llm_call steps for one agent and returns the full
+ * accumulated text. Deltas with no text (just metadata events) are skipped.
+ */
+function accumulateText(steps: ExecutionStep[]): string {
+  return steps
+    .filter(s => s.payload.kind === 'llm_call')
+    .map(s => (s.payload as LlmCallPayload).delta ?? '')
+    .join('');
+}
+
 // ─── Step sub-components ──────────────────────────────────────────────────────
 
-function StepItem({ step }: { step: ExecutionStep }) {
+function LlmBlock({ steps, isStreaming }: { steps: ExecutionStep[]; isStreaming: boolean }) {
+  const text = useMemo(() => accumulateText(steps), [steps]);
+  if (!text && !isStreaming) return null;
+
+  return (
+    <div className="flex gap-2 py-1 group">
+      <Brain className="w-3 h-3 text-gray-300 mt-1 flex-shrink-0 group-hover:text-violet-300 transition-colors" />
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-gray-600 leading-relaxed">
+          {text ? <RichText text={text} /> : null}
+          {isStreaming && (
+            <span className="inline-block w-1.5 h-3.5 bg-violet-400 ml-0.5 animate-pulse rounded-sm align-middle" />
+          )}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ToolCallItem({ step }: { step: ExecutionStep }) {
   const [open, setOpen] = useState(false);
-  const p = step.payload;
+  const tp = step.payload as ToolCallPayload;
+  const isCall = tp.input !== undefined && tp.output === undefined;
+  const isDataStore = tp.tool_name === 'data-store';
 
-  if (p.kind === 'llm_call') {
-    const lp = p as LlmCallPayload;
-    if (!lp.delta) return null;
-    return (
-      <div className="flex gap-2 py-0.5 group">
-        <Brain className="w-3 h-3 text-gray-300 mt-1 flex-shrink-0 group-hover:text-violet-300 transition-colors" />
-        <span className="text-xs text-gray-500 leading-relaxed font-mono">{lp.delta}</span>
-      </div>
-    );
-  }
-
-  if (p.kind === 'tool_call') {
-    const tp = p as ToolCallPayload;
-    const isCall = tp.input !== undefined && tp.output === undefined;
-    return (
-      <div className="my-1">
-        <button
-          onClick={() => setOpen(!open)}
-          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white border border-gray-100 hover:border-gray-200 transition-colors text-left shadow-sm"
-        >
-          <Wrench className={cn('w-3 h-3 flex-shrink-0', isCall ? 'text-amber-400' : 'text-emerald-400')} />
-          <span className="text-xs font-mono text-gray-500 flex-1 truncate">
-            {isCall ? `${tp.tool_name}(…)` : `${tp.tool_name} → result`}
-          </span>
-          {tp.error && <XCircle className="w-3 h-3 text-red-400" />}
-          {open ? <ChevronDown className="w-3 h-3 text-gray-300" /> : <ChevronR className="w-3 h-3 text-gray-300" />}
-        </button>
-        {open && (
-          <div className="mt-1 mx-1 p-2.5 bg-gray-50 border border-gray-100 rounded-lg">
-            <pre className={cn('text-[11px] whitespace-pre-wrap break-words font-mono', tp.error ? 'text-red-400' : 'text-gray-500')}>
-              {isCall ? JSON.stringify(tp.input, null, 2) : tp.output}
-            </pre>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  if (p.kind === 'contract_check') {
-    const cp = p as ContractCheckPayload;
-    return (
-      <div className={cn(
-        'flex gap-2 px-2.5 py-2 rounded-lg my-1 text-xs border',
-        cp.result === 'pass' ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100',
-      )}>
-        {cp.result === 'pass'
-          ? <CheckCircle className="w-3 h-3 text-emerald-500 mt-0.5 flex-shrink-0" />
-          : <XCircle className="w-3 h-3 text-red-400 mt-0.5 flex-shrink-0" />}
-        <div>
-          <p className="font-medium text-gray-800">{cp.description}</p>
-          <p className="text-gray-500 mt-0.5">{cp.reasoning}</p>
+  return (
+    <div className="my-1">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white border border-gray-100 hover:border-gray-200 transition-colors text-left shadow-sm"
+      >
+        {isDataStore
+          ? <Database className={cn('w-3 h-3 flex-shrink-0', isCall ? 'text-indigo-400' : 'text-indigo-500')} />
+          : <Wrench className={cn('w-3 h-3 flex-shrink-0', isCall ? 'text-amber-400' : 'text-emerald-400')} />
+        }
+        <span className="text-xs font-mono text-gray-500 flex-1 truncate">
+          {isCall ? `${tp.tool_name}(…)` : `${tp.tool_name} → result`}
+        </span>
+        {tp.error && <XCircle className="w-3 h-3 text-red-400 flex-shrink-0" />}
+        {!isCall && !tp.error && <CheckCircle className="w-3 h-3 text-emerald-400 flex-shrink-0" />}
+        {open ? <ChevronDown className="w-3 h-3 text-gray-300" /> : <ChevronR className="w-3 h-3 text-gray-300" />}
+      </button>
+      {open && (
+        <div className="mt-1 mx-1 rounded-lg overflow-hidden border border-gray-100">
+          <pre className={cn(
+            'text-[11px] p-2.5 whitespace-pre-wrap break-words font-mono overflow-x-auto',
+            tp.error ? 'bg-red-50 text-red-500' : 'bg-gray-950 text-emerald-300',
+          )}>
+            {isCall
+              ? JSON.stringify(tp.input, null, 2)
+              : (tp.output ?? '')
+            }
+          </pre>
         </div>
-      </div>
-    );
-  }
+      )}
+    </div>
+  );
+}
 
-  if (p.kind === 'routing') {
-    return (
-      <div className="flex items-center gap-1.5 py-1 text-xs text-gray-400">
-        <ArrowRight className="w-3 h-3" />
-        <span className="font-mono">{(p as { message?: string }).message}</span>
+function ContractItem({ step }: { step: ExecutionStep }) {
+  const cp = step.payload as ContractCheckPayload;
+  return (
+    <div className={cn(
+      'flex gap-2 px-2.5 py-2 rounded-lg my-1 text-xs border',
+      cp.result === 'pass' ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100',
+    )}>
+      {cp.result === 'pass'
+        ? <CheckCircle className="w-3 h-3 text-emerald-500 mt-0.5 flex-shrink-0" />
+        : <XCircle className="w-3 h-3 text-red-400 mt-0.5 flex-shrink-0" />}
+      <div>
+        <p className="font-medium text-gray-800">{cp.description}</p>
+        <p className="text-gray-500 mt-0.5 leading-relaxed">{cp.reasoning}</p>
       </div>
-    );
-  }
-
-  return null;
+    </div>
+  );
 }
 
 // ─── Per-agent contract results ───────────────────────────────────────────────
@@ -122,7 +185,7 @@ function AgentContractResults({ agentExecId }: { agentExecId: string }) {
               r.result === 'pass' ? 'text-emerald-600' :
               r.result === 'fail' ? 'text-red-500' : 'text-gray-400',
             )}>{r.result}</span>
-            <p className="text-gray-500 mt-0.5 line-clamp-2">{r.judge_reasoning}</p>
+            <p className="text-gray-500 mt-0.5 leading-relaxed line-clamp-3">{r.judge_reasoning}</p>
           </div>
         </div>
       ))}
@@ -153,9 +216,13 @@ function AgentRow({
     if (status === 'running') setOpen(true);
   }, [status]);
 
-  const displaySteps = steps.filter(s =>
-    !(s.payload.kind === 'llm_call' && !(s.payload as LlmCallPayload).delta)
-  );
+  // Separate step types
+  const llmSteps = steps.filter(s => s.payload.kind === 'llm_call');
+  const toolSteps = steps.filter(s => s.payload.kind === 'tool_call');
+  const contractSteps = steps.filter(s => s.payload.kind === 'contract_check');
+  const routingSteps = steps.filter(s => s.payload.kind === 'routing');
+
+  const isStreaming = status === 'running';
 
   const statusIcon = {
     idle:      <Minus className="w-3.5 h-3.5 text-gray-300" />,
@@ -199,16 +266,34 @@ function AgentRow({
       </button>
 
       {open && (
-        <div className="px-3 pb-3 pt-1 border-t border-gray-50 space-y-0.5">
-          {displaySteps.length === 0 && status === 'idle' && (
+        <div className="px-3 pb-3 pt-2 border-t border-gray-50 space-y-1">
+          {steps.length === 0 && status === 'idle' && (
             <p className="text-xs text-gray-400 py-2 text-center">Waiting…</p>
           )}
-          {displaySteps.map(s => <StepItem key={s.id} step={s} />)}
-          {status === 'running' && (
+
+          {/* Routing messages */}
+          {routingSteps.map(s => (
+            <div key={s.id} className="flex items-center gap-1.5 py-0.5 text-xs text-gray-400">
+              <ArrowRight className="w-3 h-3 flex-shrink-0" />
+              <span className="font-mono">{(s.payload as { message?: string }).message}</span>
+            </div>
+          ))}
+
+          {/* Tool calls (shown in order) */}
+          {toolSteps.map(s => <ToolCallItem key={s.id} step={s} />)}
+
+          {/* Contract checks */}
+          {contractSteps.map(s => <ContractItem key={s.id} step={s} />)}
+
+          {/* LLM output — accumulated as one readable block, not delta-by-delta */}
+          <LlmBlock steps={llmSteps} isStreaming={isStreaming} />
+
+          {status === 'running' && steps.length === 0 && (
             <div className="flex items-center gap-1.5 text-xs text-gray-400 pt-1 animate-pulse">
               <Loader2 className="w-3 h-3 animate-spin" /><span>Processing…</span>
             </div>
           )}
+
           {agentExecId && <AgentContractResults agentExecId={agentExecId} />}
         </div>
       )}
@@ -253,7 +338,7 @@ function VerificationBanner({
           </p>
           <p className={cn('text-xs mt-0.5 leading-relaxed', overallPassed ? 'text-emerald-600' : 'text-red-500')}>
             {overallPassed
-              ? `All ${agents.length} sub-agent${agents.length !== 1 ? 's' : ''} completed their responsibilities and all contracts verified.`
+              ? `All ${agents.length} sub-agent${agents.length !== 1 ? 's' : ''} completed and contracts verified.`
               : `${agents.filter(a => agentStatuses[a.id] === 'failed').length} agent(s) failed or a blocking contract was violated.`
             }
           </p>
@@ -291,6 +376,9 @@ export default function ExecutionPanel({ workflowAgents }: { workflowAgents: Age
   const agentStatuses = useExecutionStore((s) => s.agentStatuses);
   const agentExecIds = useExecutionStore((s) => s.agentExecutionIds);
 
+  // Stable dep key for agentExecIds
+  const agentExecIdsKey = JSON.stringify(agentExecIds);
+
   // Subscribe to steps for all agents when execution starts
   useEffect(() => {
     if (!executionId) { setStepsByAgent({}); return; }
@@ -309,7 +397,7 @@ export default function ExecutionPanel({ workflowAgents }: { workflowAgents: Age
           }
         });
 
-      // Subscribe to new steps
+      // Subscribe to new steps in realtime
       const ch = supabase.channel(`steps:${agentExecId}`)
         .on('postgres_changes', {
           event: 'INSERT', schema: 'public', table: 'execution_steps',
@@ -325,7 +413,8 @@ export default function ExecutionPanel({ workflowAgents }: { workflowAgents: Age
     }
 
     return () => { channels.forEach(ch => supabase.removeChannel(ch)); };
-  }, [executionId, JSON.stringify(agentExecIds)]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [executionId, agentExecIdsKey]);
 
   if (!executionId) {
     return (

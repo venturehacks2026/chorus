@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Trash2 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { Save, Trash2, Sparkles, CheckCircle } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useParams } from 'next/navigation';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import type { AgentNodeData, AgentTool, Connector } from '@/lib/types';
 
@@ -15,6 +16,10 @@ const MODELS = [
 const INPUT = 'w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all';
 
 export default function AgentConfigPanel() {
+  const params = useParams<{ id: string }>();
+  const workflowId = params?.id;
+  const qc = useQueryClient();
+
   const selectedId = useWorkflowStore((s) => s.selectedAgentId);
   const getSelected = useWorkflowStore((s) => s.getSelectedAgent);
   const updateAgentData = useWorkflowStore((s) => s.updateAgentData);
@@ -26,8 +31,13 @@ export default function AgentConfigPanel() {
 
   const agent = getSelected() as AgentNodeData | null;
   const [form, setForm] = useState<Partial<AgentNodeData>>({});
+  const [generatingContracts, setGeneratingContracts] = useState(false);
+  const [contractsGenerated, setContractsGenerated] = useState(false);
 
-  useEffect(() => { if (agent) setForm(agent); }, [selectedId]);
+  useEffect(() => {
+    if (agent) setForm(agent);
+    setContractsGenerated(false);
+  }, [selectedId]);
 
   if (!selectedId || !agent) {
     return (
@@ -51,6 +61,29 @@ export default function AgentConfigPanel() {
 
   function removeTool(tid: string) {
     setForm(f => ({ ...f, tools: (f.tools ?? []).filter(t => t.id !== tid) }));
+  }
+
+  async function generateContracts() {
+    if (!workflowId || !selectedId || generatingContracts) return;
+    setGeneratingContracts(true);
+    try {
+      await fetch('/api/contracts/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workflow_id: workflowId,
+          agent_id: selectedId,
+          agent_name: (form.name as string) ?? '',
+          agent_role: (form.role as string) ?? '',
+          system_prompt: (form.system_prompt as string) ?? '',
+          tools: (form.tools as AgentTool[] ?? []).map(t => t.connector_id),
+        }),
+      });
+      qc.invalidateQueries({ queryKey: ['contracts', workflowId, selectedId] });
+      setContractsGenerated(true);
+    } finally {
+      setGeneratingContracts(false);
+    }
   }
 
   const unusedConnectors = connectors.filter(c => !(form.tools ?? []).some(t => t.connector_id === c.slug));
@@ -124,6 +157,27 @@ export default function AgentConfigPanel() {
             </select>
           )}
         </div>
+
+        {/* Auto-generate contracts */}
+        {workflowId && (
+          <div className="pt-2 border-t border-gray-100">
+            <button
+              onClick={generateContracts}
+              disabled={generatingContracts}
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed border-violet-200 text-xs text-violet-600 hover:bg-violet-50 hover:border-violet-300 transition-all disabled:opacity-50"
+            >
+              {contractsGenerated
+                ? <><CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> Contracts generated</>
+                : generatingContracts
+                  ? <><span className="w-3 h-3 border border-violet-400 border-t-transparent rounded-full animate-spin" /> Generating contracts…</>
+                  : <><Sparkles className="w-3.5 h-3.5" /> Auto-generate contracts</>
+              }
+            </button>
+            <p className="text-[10px] text-gray-400 mt-1.5 text-center">
+              AI writes behavioral contracts for this agent
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

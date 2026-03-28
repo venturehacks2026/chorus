@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
@@ -62,7 +62,7 @@ export default function WorkflowEditor() {
           loadGraph(d.workflow.id, d.workflow.graph_json);
           // Remove streaming animation from edges once done
           setEdges(
-            toWorkflowGraph().edges.map(e => ({ ...e, animated: false }))
+            useWorkflowStore.getState().edges.map(e => ({ ...e, animated: false }))
           );
           refetch();
         }
@@ -72,6 +72,31 @@ export default function WorkflowEditor() {
       loadGraph(data.workflow.id, data.workflow.graph_json);
     }
   }, [data?.workflow?.id, data?.workflow?.graph_json?.agents?.length]);
+
+  // On mount: if we have a persisted executionId for this workflow, rehydrate state from DB
+  useEffect(() => {
+    if (!id) return;
+    const execWfId = useExecutionStore.getState().executionWorkflowId;
+    const persistedExecId = useExecutionStore.getState().executionId;
+    // Only rehydrate if this execution belongs to the current workflow and is not already done
+    if (!persistedExecId || execWfId !== id) return;
+    const persistedStatus = useExecutionStore.getState().executionStatus;
+    if (persistedStatus === 'completed' || persistedStatus === 'failed') return;
+
+    // Fetch live state from DB
+    fetch(`/api/executions/${persistedExecId}`)
+      .then(r => r.json())
+      .then(({ execution, agent_executions }) => {
+        if (!execution) return;
+        updateExecutionStatus(execution.status);
+        (agent_executions ?? []).forEach((ae: AgentExecution) => {
+          updateAgentStatus(ae.agent_id, ae.status, ae.id);
+        });
+      })
+      .catch(() => {/* silently skip if network fails */});
+  // Only run on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   // Realtime subscriptions for execution
   useEffect(() => {
@@ -122,7 +147,7 @@ export default function WorkflowEditor() {
       body: JSON.stringify({ workflow_id: id }),
     });
     const json = await res.json() as { execution_id: string };
-    startExecution(json.execution_id);
+    startExecution(json.execution_id, id);
     setRunning(false);
   }
 

@@ -6,7 +6,7 @@ import {
   Shield, ShieldAlert, ShieldCheck,
   AlertTriangle, Pencil,
   ChevronDown, ChevronRight, Loader2, Play,
-  XCircle, Archive,
+  XCircle, Archive, Maximize2, Minimize2,
 } from 'lucide-react';
 import type {
   ContractListData, DerivedContract, ContractFinding,
@@ -238,6 +238,8 @@ function ContractCard({
   const [editYaml, setEditYaml] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [yamlExpanded, setYamlExpanded] = useState(false);
+  const [sourceExpanded, setSourceExpanded] = useState(false);
 
   const sev = contract.severity ?? 'medium';
   const sevStyle = SEVERITY_STYLE[sev];
@@ -302,11 +304,41 @@ function ContractCard({
 
       {/* Expanded details */}
       {expanded && (
-        <div className="border-t border-gray-100 px-3 py-2.5 space-y-2">
+        <div className="border-t border-gray-100 px-3 py-2.5 space-y-3">
+          {/* Parsed rules display */}
+          <ParsedRules dslYaml={contract.dsl_yaml} />
+
+          {/* Source text with show more */}
           {contract.source_text && (
             <div>
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-1">Source</p>
-              <p className="text-[11px] text-gray-500 italic leading-relaxed">&ldquo;{contract.source_text}&rdquo;</p>
+              {contract.source_text.length > 120 && !sourceExpanded ? (
+                <div>
+                  <p className="text-[11px] text-gray-500 italic leading-relaxed">
+                    &ldquo;{contract.source_text.slice(0, 120)}...&rdquo;
+                  </p>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSourceExpanded(true); }}
+                    className="text-[10px] font-medium text-violet-600 hover:text-violet-700 mt-0.5"
+                  >
+                    Show more
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-[11px] text-gray-500 italic leading-relaxed">
+                    &ldquo;{contract.source_text}&rdquo;
+                  </p>
+                  {contract.source_text.length > 120 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setSourceExpanded(false); }}
+                      className="text-[10px] font-medium text-violet-600 hover:text-violet-700 mt-0.5"
+                    >
+                      Show less
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -328,23 +360,34 @@ function ContractCard({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">YAML DSL</p>
-                {contract.status === 'draft' && !isEditing && (
-                  <button
-                    onClick={handleEdit}
-                    className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-violet-600 transition-colors"
-                  >
-                    <Pencil className="w-2.5 h-2.5" />
-                    Edit
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {!isEditing && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setYamlExpanded(!yamlExpanded); }}
+                      className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      {yamlExpanded ? <Minimize2 className="w-2.5 h-2.5" /> : <Maximize2 className="w-2.5 h-2.5" />}
+                      {yamlExpanded ? 'Collapse' : 'Expand'}
+                    </button>
+                  )}
+                  {contract.status === 'draft' && !isEditing && (
+                    <button
+                      onClick={handleEdit}
+                      className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-violet-600 transition-colors"
+                    >
+                      <Pencil className="w-2.5 h-2.5" />
+                      Edit
+                    </button>
+                  )}
+                </div>
               </div>
               {isEditing ? (
                 <div className="space-y-2" onClick={e => e.stopPropagation()}>
                   <textarea
                     value={editYaml}
                     onChange={e => setEditYaml(e.target.value)}
-                    className="w-full text-[10px] font-mono text-gray-600 bg-white border border-violet-200 rounded-md p-2 leading-relaxed focus:outline-none focus:ring-1 focus:ring-violet-500/30 resize-y min-h-[8rem] max-h-[20rem]"
-                    rows={Math.min(editYaml.split('\n').length + 2, 20)}
+                    className="w-full text-[11px] font-mono text-gray-600 bg-white border border-violet-200 rounded-md p-2.5 leading-relaxed focus:outline-none focus:ring-1 focus:ring-violet-500/30 resize-y min-h-[10rem]"
+                    rows={Math.min(editYaml.split('\n').length + 2, 30)}
                   />
                   {validationErrors.length > 0 && (
                     <div className="bg-red-50 border border-red-200 rounded-md px-2.5 py-2 space-y-1">
@@ -375,9 +418,20 @@ function ContractCard({
                   </div>
                 </div>
               ) : (
-                <pre className="text-[10px] text-gray-600 bg-gray-50 border border-gray-100 rounded-md p-2 overflow-x-auto max-h-48 leading-relaxed">
+                <pre className={cn(
+                  'text-[11px] text-gray-600 bg-gray-50 border border-gray-100 rounded-md p-2.5 overflow-x-auto leading-relaxed transition-all',
+                  yamlExpanded ? '' : 'max-h-32 overflow-y-hidden',
+                )}>
                   {contract.dsl_yaml}
                 </pre>
+              )}
+              {!isEditing && !yamlExpanded && contract.dsl_yaml.split('\n').length > 8 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setYamlExpanded(true); }}
+                  className="w-full text-[10px] font-medium text-violet-600 hover:text-violet-700 text-center py-1 bg-gradient-to-t from-gray-50 to-transparent -mt-6 relative z-10"
+                >
+                  Show full YAML
+                </button>
               )}
             </div>
           )}
@@ -435,6 +489,108 @@ function ContractCard({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ── Parsed rules from YAML ── */
+
+interface ParsedRule {
+  id?: string;
+  condition?: string;
+  action?: string;
+  rationale?: string;
+  escalate_to?: string;
+  message?: string;
+}
+
+const RULE_CATEGORY_STYLE: Record<string, { label: string; bg: string; text: string; border: string }> = {
+  must_always:   { label: 'Must Always', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+  must_never:    { label: 'Must Never', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
+  escalate_when: { label: 'Escalate When', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+};
+
+function parseYamlRules(yaml: string | null): Record<string, ParsedRule[]> {
+  if (!yaml) return {};
+  const result: Record<string, ParsedRule[]> = {};
+
+  for (const category of ['must_always', 'must_never', 'escalate_when']) {
+    const regex = new RegExp(`${category}:\\s*\\n((?:[ \\t]+-[\\s\\S]*?)(?=\\n\\s{2,}\\w|\\n\\w|$))`, 'm');
+    const match = yaml.match(regex);
+    if (!match) continue;
+
+    const block = match[1];
+    const items: ParsedRule[] = [];
+    const itemBlocks = block.split(/\n\s*- /).filter(Boolean);
+
+    for (const itemBlock of itemBlocks) {
+      const rule: ParsedRule = {};
+      const idMatch = itemBlock.match(/id:\s*(.+)/);
+      const condMatch = itemBlock.match(/condition:\s*"?([^"\n]+)"?/);
+      const actMatch = itemBlock.match(/action:\s*"?([^"\n]+)"?/);
+      const ratMatch = itemBlock.match(/rationale:\s*"?([^"\n]+)"?/);
+      const escMatch = itemBlock.match(/escalate_to:\s*"?([^"\n]+)"?/);
+      const msgMatch = itemBlock.match(/message:\s*"?([^"\n]+)"?/);
+
+      if (idMatch) rule.id = idMatch[1].trim();
+      if (condMatch) rule.condition = condMatch[1].trim();
+      if (actMatch) rule.action = actMatch[1].trim();
+      if (ratMatch) rule.rationale = ratMatch[1].trim();
+      if (escMatch) rule.escalate_to = escMatch[1].trim();
+      if (msgMatch) rule.message = msgMatch[1].trim();
+
+      if (Object.keys(rule).length > 0) items.push(rule);
+    }
+
+    if (items.length > 0) result[category] = items;
+  }
+
+  return result;
+}
+
+function ParsedRules({ dslYaml }: { dslYaml: string | null }) {
+  const ruleGroups = parseYamlRules(dslYaml);
+  const categories = Object.keys(ruleGroups);
+  if (categories.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">Rules</p>
+      {categories.map(cat => {
+        const style = RULE_CATEGORY_STYLE[cat] ?? { label: cat, bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' };
+        return (
+          <div key={cat} className="space-y-1.5">
+            <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full', style.bg, style.text)}>
+              {style.label}
+            </span>
+            {ruleGroups[cat].map((rule, i) => (
+              <div key={rule.id ?? i} className={cn('rounded-md border px-2.5 py-2 space-y-1', style.border, 'bg-white')}>
+                {rule.condition && (
+                  <p className="text-[11px] text-gray-700">
+                    <span className="font-medium text-gray-500">If </span>
+                    <span className="font-mono text-[10px] bg-gray-50 px-1 py-0.5 rounded">{rule.condition}</span>
+                  </p>
+                )}
+                {rule.action && (
+                  <p className="text-[11px] text-gray-800 font-medium">{rule.action}</p>
+                )}
+                {rule.escalate_to && (
+                  <p className="text-[11px] text-gray-700">
+                    <span className="text-gray-500">Escalate to: </span>
+                    <span className="font-medium">{rule.escalate_to}</span>
+                  </p>
+                )}
+                {rule.message && (
+                  <p className="text-[10px] text-gray-500 italic">{rule.message}</p>
+                )}
+                {rule.rationale && (
+                  <p className="text-[10px] text-gray-400">{rule.rationale}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 }

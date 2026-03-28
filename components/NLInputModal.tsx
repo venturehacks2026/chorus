@@ -58,7 +58,7 @@ export default function NLInputModal({ open, onClose, onSubmit, loading, error }
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Research assistant"
-              className="w-full bg-bg border border-border rounded-md px-3 py-2 text-sm placeholder:text-text-subtle focus:outline-none focus:ring-1 focus:ring-text/20 focus:border-text-subtle transition-all"
+              className="w-full bg-bg-subtle border border-border rounded-md px-3 py-2 text-sm placeholder:text-text-subtle focus:outline-none focus:ring-1 focus:ring-sand-400/40 focus:border-sand-400 transition-all"
               required
             />
           </div>
@@ -70,7 +70,7 @@ export default function NLInputModal({ open, onClose, onSubmit, loading, error }
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="What should this agent pipeline accomplish?"
               rows={4}
-              className="w-full bg-bg border border-border rounded-md px-3 py-2 text-sm placeholder:text-text-subtle focus:outline-none focus:ring-1 focus:ring-text/20 focus:border-text-subtle transition-all resize-none"
+              className="w-full bg-bg-subtle border border-border rounded-md px-3 py-2 text-sm placeholder:text-text-subtle focus:outline-none focus:ring-1 focus:ring-sand-400/40 focus:border-sand-400 transition-all resize-none"
               required
             />
           </div>
@@ -90,7 +90,7 @@ export default function NLInputModal({ open, onClose, onSubmit, loading, error }
           </div>
 
           {err && (
-            <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-md">
+            <p className="text-xs text-red-700 bg-red-100 border border-red-200 px-3 py-2 rounded-md">
               {err}
             </p>
           )}
@@ -100,11 +100,11 @@ export default function NLInputModal({ open, onClose, onSubmit, loading, error }
             disabled={loading || !name.trim() || !prompt.trim()}
             className={cn(
               'w-full py-2 rounded-md text-sm font-medium transition-all',
-              'bg-accent hover:bg-accent-hover text-white',
+              'bg-sand-400 hover:bg-sand-500 text-sand-900',
               'disabled:opacity-40 disabled:cursor-not-allowed',
             )}
           >
-            {loading ? 'Generating workflow…' : 'Generate workflow'}
+            {loading ? 'Generating workflow...' : 'Generate workflow'}
           </button>
         </form>
       </div>

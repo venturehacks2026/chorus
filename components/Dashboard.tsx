@@ -17,9 +17,9 @@ const STATUS_LABEL: Record<WorkflowStatus, string> = {
 
 const STATUS_COLOR: Record<WorkflowStatus, string> = {
   draft: 'text-text-subtle',
-  running: 'text-blue-500',
-  completed: 'text-emerald-600',
-  failed: 'text-red-500',
+  running: 'text-sand-600',
+  completed: 'text-emerald-700',
+  failed: 'text-red-600',
 };
 
 export default function Dashboard() {
@@ -59,7 +59,7 @@ export default function Dashboard() {
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-md transition-colors"
+          className="px-4 py-2 bg-sand-400 hover:bg-sand-500 text-sand-900 text-sm font-medium rounded-md transition-colors"
         >
           New workflow
         </button>
@@ -84,7 +84,7 @@ export default function Dashboard() {
             </p>
             <button
               onClick={() => setShowModal(true)}
-              className="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-md transition-colors"
+              className="px-4 py-2 bg-sand-400 hover:bg-sand-500 text-sand-900 text-sm font-medium rounded-md transition-colors"
             >
               New workflow
             </button>
@@ -136,7 +136,7 @@ export default function Dashboard() {
                         </Link>
                         <button
                           onClick={() => { if (confirm('Delete this workflow?')) del.mutate(wf.id); }}
-                          className="text-xs text-text-muted hover:text-red-500 transition-colors"
+                          className="text-xs text-text-muted hover:text-red-600 transition-colors"
                         >
                           Delete
                         </button>

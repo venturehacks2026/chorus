@@ -30,7 +30,7 @@ export default function Sidebar() {
               className={cn(
                 'flex items-center gap-2.5 px-3 py-1.5 text-sm rounded-md transition-colors',
                 active
-                  ? 'bg-bg-muted text-text font-medium'
+                  ? 'bg-accent-muted text-text font-medium'
                   : 'text-text-muted hover:text-text hover:bg-bg-subtle',
               )}
             >

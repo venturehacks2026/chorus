@@ -26,9 +26,9 @@ export const AgentNode = memo(function AgentNode({ data: raw, selected }: NodePr
   }
 
   const borderClass = {
-    running: 'border-blue-400',
-    completed: 'border-emerald-500',
-    failed: 'border-red-400',
+    running: 'border-sand-500',
+    completed: 'border-emerald-600',
+    failed: 'border-red-500',
     idle: 'border-border',
     skipped: 'border-border',
   }[status];
@@ -42,9 +42,9 @@ export const AgentNode = memo(function AgentNode({ data: raw, selected }: NodePr
   }[status];
 
   const statusColor = {
-    running: 'text-blue-500',
-    completed: 'text-emerald-600',
-    failed: 'text-red-500',
+    running: 'text-sand-600',
+    completed: 'text-emerald-700',
+    failed: 'text-red-600',
     idle: '',
     skipped: '',
   }[status];
@@ -53,19 +53,19 @@ export const AgentNode = memo(function AgentNode({ data: raw, selected }: NodePr
     <div
       onClick={handleClick}
       className={cn(
-        'relative bg-bg border rounded-lg px-4 py-3 min-w-[200px] cursor-pointer select-none shadow-sm',
+        'relative bg-bg-subtle border rounded-lg px-4 py-3 min-w-[200px] cursor-pointer select-none shadow-sm',
         'transition-all duration-150',
         borderClass,
-        status === 'running' && 'shadow-blue-100 shadow-md',
-        (selected || isActiveExec) && 'ring-1 ring-text/20',
+        status === 'running' && 'shadow-sand-300 shadow-md',
+        (selected || isActiveExec) && 'ring-1 ring-sand-400/50',
       )}
     >
       {status === 'running' && (
-        <span className="absolute inset-0 rounded-lg border border-blue-300 animate-pulse pointer-events-none" />
+        <span className="absolute inset-0 rounded-lg border border-sand-400/50 animate-pulse pointer-events-none" />
       )}
 
-      <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-border !border-bg" />
-      <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-border !border-bg" />
+      <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-sand-400 !border-bg-subtle" />
+      <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-sand-400 !border-bg-subtle" />
 
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">

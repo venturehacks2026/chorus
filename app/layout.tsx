@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={dmSans.variable}>
-      <body className="bg-bg text-text font-sans antialiased">
+      <body className="bg-bg text-text font-sans antialiased selection:bg-accent/30">
         <Providers>
           <div className="flex h-screen overflow-hidden">
             <Sidebar />

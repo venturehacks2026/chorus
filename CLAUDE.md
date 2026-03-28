@@ -5,7 +5,9 @@ Platform that bridges human SOPs and AI agent execution. Ingests human-facing St
 ## Core Concepts
 
 - **SOP** — Source-of-truth human process document (PDF, DOCX, Confluence, Notion). Never modified by the system.
-- **ASD (Agent Skill Document)** — Agent-optimized DAG derived from an SOP. Typed nodes: `ActionNode`, `DecisionNode`, `HandoffNode`, `WaitNode`, `StartNode`, `EndNode`, `ErrorNode`. Versioned, editable via React Flow graph UI.
+- **ASD (Agent Skill Document)** — Agent-optimized DAG derived from an SOP. Typed nodes: `ActionNode`, `DecisionNode`, `HandoffNode`, `WaitNode`, `StartNode`, `EndNode`, `ErrorNode`, `SkillNode`. Versioned, editable via React Flow graph UI.
+- **Skill Document** — Knowledge base entry describing an agent capability (web search, email, CRM lookup, etc.). Bidirectionally synced with SkillNodes on the graph. Ingested from API specs, connector scans, or manual creation.
+- **Skill Knowledge Base** — Searchable, categorized library of all available skills. Skills are dragged from the KB onto ASD graphs to create SkillNodes.
 - **Contract** — YAML-DSL behavioral spec (must-always, must-never, must-escalate, violation-response). Scoped to an ASD and optionally specific nodes. States: `draft`, `active`, `suspended`, `archived`. Enforced pre-execution at every tool call boundary.
 - **Agent Harness** — Runtime wrapper: ASD + contracts + scoped connector tools + memory context. Least-privilege tool access.
 - **Connector** — Typed integration with external systems (Salesforce, Slack, Gmail, Jira, etc.) registered in a ConnectorRegistry. ASD declares which tools it needs; harness provides only those.
@@ -24,6 +26,15 @@ Platform that bridges human SOPs and AI agent execution. Ingests human-facing St
 5. **Execution Layer** — Routes tasks to correct ASD via semantic search. Contract enforcement interceptor checks preconditions, must-never rules, and escalation triggers before every tool call. Human handoff pauses execution until response.
 6. **Dashboard** — Execution timeline, violation feed, stuck agent queue, drift alerts, inline contract/ASD editors, coverage scores.
 
+## UI Architecture
+
+- **Sand palette**: `#EDEDE9` `#D6CCC2` `#F5EBE0` `#E3D5CA` `#D5BDAF` — warm earth tones, light mode
+- **Graph layout**: Left-to-right (LR) flow direction, not top-to-bottom
+- **Animated ingestion**: When a document/NL query is submitted, nodes build left-to-right in real-time as the LLM extracts requirements
+- **Sidebar tabs**: Workflows | Knowledge Base | Skills | Marketplace
+- **Knowledge Base** (`/knowledge`) — Upload SOPs, policies, process docs. One-click "Generate ASD" triggers animated ingestion.
+- **Skills** (`/skills`) — Upload skill documents, import OpenAPI specs, scan connectors. Auto-creates SkillNodes for drag-and-drop onto graphs.
+
 ## Design Principles
 
 - SOP is always source of truth
@@ -36,3 +47,4 @@ Platform that bridges human SOPs and AI agent execution. Ingests human-facing St
 ## Key Files
 
 - `docs/SPEC.md` — Full project specification
+- `docs/REACTFLOW_CONTRACT.md` — React Flow graph visualizer contract & requirements (node types, data contracts, styling, phases)

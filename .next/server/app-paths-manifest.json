@@ -1,0 +1,6 @@
+{
+  "/api/connectors/route": "app/api/connectors/route.js",
+  "/api/workflows/route": "app/api/workflows/route.js",
+  "/marketplace/page": "app/marketplace/page.js",
+  "/page": "app/page.js"
+}

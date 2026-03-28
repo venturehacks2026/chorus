@@ -114,10 +114,10 @@ export default function WorkflowEditor() {
         </span>
 
         {executionStatus === 'completed' && (
-          <span className="text-xs text-emerald-600 font-medium">Completed</span>
+          <span className="text-xs text-emerald-700 font-medium">Completed</span>
         )}
         {executionStatus === 'failed' && (
-          <span className="text-xs text-red-500 font-medium">Failed</span>
+          <span className="text-xs text-red-600 font-medium">Failed</span>
         )}
 
         <div className="flex-1" />
@@ -146,7 +146,7 @@ export default function WorkflowEditor() {
           disabled={saving || isExecRunning}
           className="px-3 py-1.5 bg-bg border border-border hover:bg-bg-muted rounded-md text-xs font-medium transition-colors disabled:opacity-40"
         >
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? 'Saving...' : 'Save'}
         </button>
 
         <button
@@ -156,10 +156,10 @@ export default function WorkflowEditor() {
             'px-3.5 py-1.5 rounded-md text-xs font-medium transition-all',
             isExecRunning || running
               ? 'bg-bg-muted text-text-muted cursor-not-allowed border border-border'
-              : 'bg-accent hover:bg-accent-hover text-white',
+              : 'bg-sand-400 hover:bg-sand-500 text-sand-900',
           )}
         >
-          {isExecRunning || running ? 'Running…' : 'Run'}
+          {isExecRunning || running ? 'Running...' : 'Run'}
         </button>
       </div>
 

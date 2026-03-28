@@ -70,7 +70,7 @@ export default function MarketplacePage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search connectors…"
-          className="w-52 bg-bg border border-border rounded-md px-3 py-1.5 text-sm placeholder:text-text-subtle focus:outline-none focus:ring-1 focus:ring-text/20 focus:border-text-subtle transition-all"
+          className="w-52 bg-input border border-input-border rounded-md px-3 py-1.5 text-sm placeholder:text-input-placeholder focus:outline-none focus:ring-1 focus:ring-input-focus/25 focus:border-input-focus transition-all"
         />
       </div>
 

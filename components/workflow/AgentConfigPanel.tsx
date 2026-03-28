@@ -69,7 +69,7 @@ export default function AgentConfigPanel() {
             <input
               value={(form[field] as string) ?? ''}
               onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
-              className="w-full bg-bg border border-border rounded-md px-3 py-2 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-sand-400/50 focus:ring-1 focus:ring-sand-400/20 transition-all"
+              className="w-full bg-input border border-input-border rounded-md px-3 py-2 text-sm text-text placeholder:text-input-placeholder focus:outline-none focus:border-input-focus focus:ring-1 focus:ring-input-focus/25 transition-all"
             />
           </div>
         ))}
@@ -79,7 +79,7 @@ export default function AgentConfigPanel() {
           <select
             value={form.model ?? 'claude-opus-4-5'}
             onChange={e => setForm(f => ({ ...f, model: e.target.value }))}
-            className="w-full bg-bg border border-border rounded-md px-3 py-2 text-sm text-text focus:outline-none focus:border-sand-400/50"
+            className="w-full bg-input border border-input-border rounded-md px-3 py-2 text-sm text-text focus:outline-none focus:border-input-focus"
           >
             {MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
           </select>
@@ -91,7 +91,7 @@ export default function AgentConfigPanel() {
             value={form.system_prompt ?? ''}
             onChange={e => setForm(f => ({ ...f, system_prompt: e.target.value }))}
             rows={6}
-            className="w-full bg-bg border border-border rounded-md px-3 py-2 text-sm text-text focus:outline-none focus:border-sand-400/50 focus:ring-1 focus:ring-sand-400/20 resize-none transition-all"
+            className="w-full bg-input border border-input-border rounded-md px-3 py-2 text-sm text-text focus:outline-none focus:border-input-focus focus:ring-1 focus:ring-input-focus/25 resize-none transition-all"
           />
         </div>
 

@@ -138,6 +138,131 @@ export interface RoutingPayload {
   next_agent_id?: string;
 }
 
+// ─── ASD Node Types (React Flow Graph Visualizer) ───────────────────────────
+
+export type ASDNodeType = 'start' | 'end' | 'action' | 'decision' | 'handoff' | 'wait' | 'error' | 'skill';
+
+export interface SOPReference {
+  documentId: string;
+  sectionId: string;
+  excerpt: string;
+}
+
+export interface ContractOverlay {
+  contractId: string;
+  contractName: string;
+  state: 'draft' | 'active' | 'suspended' | 'archived';
+  ruleCount: number;
+  ruleTypes: Array<'must_always' | 'must_never' | 'must_escalate'>;
+}
+
+export interface ExecutionNodeState {
+  phase: 'pending' | 'active' | 'completed' | 'failed' | 'skipped';
+  enteredAt?: string;
+  completedAt?: string;
+  contractCheckResults?: Array<{
+    contractId: string;
+    rule: string;
+    result: 'pass' | 'block' | 'escalate';
+  }>;
+}
+
+export interface BaseNodeData {
+  label: string;
+  description: string;
+  nodeType: ASDNodeType;
+  sopReference?: SOPReference;
+  confidenceScore: number;
+  status: 'complete' | 'needs_clarification' | 'automation_gap';
+  contracts: ContractOverlay[];
+  executionState?: ExecutionNodeState;
+  hasComplianceLanguage?: boolean;
+  suggestedContracts?: Array<{ rule: string; ruleType: 'must_always' | 'must_never' | 'must_escalate' }>;
+}
+
+export interface ActionNodeData extends BaseNodeData {
+  nodeType: 'action';
+  skillNodeId?: string;
+  parameters?: Record<string, unknown>;
+  isInternalLogic?: boolean;
+}
+
+export interface DecisionNodeData extends BaseNodeData {
+  nodeType: 'decision';
+  condition: string;
+  conditionExpression: string;
+  trueBranchLabel: string;
+  falseBranchLabel: string;
+}
+
+export interface HandoffNodeData extends BaseNodeData {
+  nodeType: 'handoff';
+  escalationTarget: string;
+  escalationChannel: string;
+  slaMinutes: number;
+  automationGapReason?: string;
+}
+
+export interface WaitNodeData extends BaseNodeData {
+  nodeType: 'wait';
+  waitType: 'timer' | 'external_trigger' | 'condition';
+  durationMinutes?: number;
+  triggerDescription?: string;
+}
+
+export interface SkillNodeData extends BaseNodeData {
+  nodeType: 'skill';
+  skillDocumentId: string;
+  skillDocumentVersion: number;
+  capability: {
+    name: string;
+    category: 'search' | 'communication' | 'data' | 'analysis' | 'integration' | 'custom';
+    provider: string;
+    apiEndpoint?: string;
+  };
+  inputSchema: Record<string, { type: string; description: string; required: boolean }>;
+  outputSchema: Record<string, { type: string; description: string }>;
+  connectorId: string;
+  toolName: string;
+  rateLimits?: { maxCallsPerMinute: number; maxCallsPerExecution: number };
+  lastSyncedAt: string;
+  syncStatus: 'synced' | 'drift' | 'pending';
+}
+
+export type StartNodeData = BaseNodeData & { nodeType: 'start' };
+export type EndNodeData = BaseNodeData & { nodeType: 'end' };
+export type ErrorNodeData = BaseNodeData & { nodeType: 'error' };
+
+export type AnyASDNodeData =
+  | StartNodeData
+  | EndNodeData
+  | ActionNodeData
+  | DecisionNodeData
+  | HandoffNodeData
+  | WaitNodeData
+  | ErrorNodeData
+  | SkillNodeData;
+
+// ─── ASD Edge Types ─────────────────────────────────────────────────────────
+
+export type ASDEdgeType = 'default' | 'decision-true' | 'decision-false' | 'error' | 'handoff' | 'skill-binding';
+
+export interface ASDEdgeData {
+  edgeType: ASDEdgeType;
+  label?: string;
+  contractDensity?: number;
+  executionState?: {
+    phase: 'pending' | 'active' | 'taken' | 'not-taken';
+    traversedAt?: string;
+  };
+  contextData?: {
+    inputPreview?: string;
+    outputPreview?: string;
+    fullInput?: unknown;
+    fullOutput?: unknown;
+  };
+}
+
 // ─── Connectors ──────────────────────────────────────────────────────────────
 
 export interface Connector {

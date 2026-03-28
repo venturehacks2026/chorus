@@ -58,7 +58,7 @@ export default function ContractEditor({ workflowId }: { workflowId: string }) {
             <div>
               <label className="block text-xs text-text-subtle mb-1">Check</label>
               <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="Did the agent summarize the content?" className="w-full bg-bg-subtle border border-border rounded-lg px-2.5 py-2 text-xs text-text focus:outline-none focus:border-accent/50" />
+                placeholder="Did the agent summarize the content?" className="w-full bg-input border border-input-border rounded-lg px-2.5 py-2 text-xs text-text focus:outline-none focus:border-input-focus" />
             </div>
             <div>
               <label className="block text-xs text-text-subtle mb-1">Judge prompt</label>

@@ -44,6 +44,15 @@ const config: Config = {
           hover: '#C4A98E',
           muted: 'rgba(213,189,175,0.20)',
         },
+        input: {
+          DEFAULT: '#FAF6F1',
+          border: '#C4B5A5',
+          focus: '#A68B6B',
+          placeholder: '#B8A090',
+        },
+        panel: {
+          DEFAULT: '#F0E6DA',
+        },
       },
     },
   },

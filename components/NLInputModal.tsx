@@ -58,7 +58,7 @@ export default function NLInputModal({ open, onClose, onSubmit, loading, error }
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Research assistant"
-              className="w-full bg-bg-subtle border border-border rounded-md px-3 py-2 text-sm placeholder:text-text-subtle focus:outline-none focus:ring-1 focus:ring-sand-400/40 focus:border-sand-400 transition-all"
+              className="w-full bg-input border border-input-border rounded-md px-3 py-2 text-sm placeholder:text-input-placeholder focus:outline-none focus:ring-1 focus:ring-input-focus/25 focus:border-input-focus transition-all"
               required
             />
           </div>
@@ -70,7 +70,7 @@ export default function NLInputModal({ open, onClose, onSubmit, loading, error }
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="What should this agent pipeline accomplish?"
               rows={4}
-              className="w-full bg-bg-subtle border border-border rounded-md px-3 py-2 text-sm placeholder:text-text-subtle focus:outline-none focus:ring-1 focus:ring-sand-400/40 focus:border-sand-400 transition-all resize-none"
+              className="w-full bg-input border border-input-border rounded-md px-3 py-2 text-sm placeholder:text-input-placeholder focus:outline-none focus:ring-1 focus:ring-input-focus/25 focus:border-input-focus transition-all resize-none"
               required
             />
           </div>

@@ -46,9 +46,10 @@ const FINDING_TYPE_LABEL: Record<FindingType, string> = {
 
 interface Props {
   asdId: string;
+  onExpandYaml?: (yaml: string, contractName: string) => void;
 }
 
-export default function ContractReviewPanel({ asdId }: Props) {
+export default function ContractReviewPanel({ asdId, onExpandYaml }: Props) {
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery<ContractListData>({
@@ -188,6 +189,7 @@ export default function ContractReviewPanel({ asdId }: Props) {
               onDismiss={(reason) => dismiss.mutate({ contractId: c.id, reason })}
               onSave={(dslYaml) => saveContract(c.id, dslYaml)}
               isActivating={activate.isPending}
+              onExpandYaml={onExpandYaml}
             />
           ))}
         </div>
@@ -224,12 +226,14 @@ function ContractCard({
   onDismiss,
   onSave,
   isActivating,
+  onExpandYaml,
 }: {
   contract: DerivedContract;
   onActivate: () => void;
   onDismiss: (reason: string) => void;
   onSave: (dslYaml: string) => Promise<{ valid: boolean; validation_errors?: { description: string }[] }>;
   isActivating: boolean;
+  onExpandYaml?: (yaml: string, contractName: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [dismissReason, setDismissReason] = useState('');
@@ -363,7 +367,14 @@ function ContractCard({
                 <div className="flex items-center gap-2">
                   {!isEditing && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); setYamlExpanded(!yamlExpanded); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onExpandYaml && contract.dsl_yaml) {
+                          onExpandYaml(contract.dsl_yaml, contract.contract_name);
+                        } else {
+                          setYamlExpanded(!yamlExpanded);
+                        }
+                      }}
                       className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 transition-colors"
                     >
                       {yamlExpanded ? <Minimize2 className="w-2.5 h-2.5" /> : <Maximize2 className="w-2.5 h-2.5" />}
@@ -418,16 +429,20 @@ function ContractCard({
                   </div>
                 </div>
               ) : (
-                <pre className={cn(
-                  'text-[11px] text-gray-600 bg-gray-50 border border-gray-100 rounded-md p-2.5 overflow-x-auto leading-relaxed transition-all',
-                  yamlExpanded ? '' : 'max-h-32 overflow-y-hidden',
-                )}>
+                <pre className="text-[11px] text-gray-600 bg-gray-50 border border-gray-100 rounded-md p-2.5 overflow-x-auto leading-relaxed max-h-32 overflow-y-hidden">
                   {contract.dsl_yaml}
                 </pre>
               )}
-              {!isEditing && !yamlExpanded && contract.dsl_yaml.split('\n').length > 8 && (
+              {!isEditing && contract.dsl_yaml.split('\n').length > 8 && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); setYamlExpanded(true); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onExpandYaml && contract.dsl_yaml) {
+                      onExpandYaml(contract.dsl_yaml, contract.contract_name);
+                    } else {
+                      setYamlExpanded(!yamlExpanded);
+                    }
+                  }}
                   className="w-full text-[10px] font-medium text-violet-600 hover:text-violet-700 text-center py-1 bg-gradient-to-t from-gray-50 to-transparent -mt-6 relative z-10"
                 >
                   Show full YAML
@@ -510,39 +525,86 @@ const RULE_CATEGORY_STYLE: Record<string, { label: string; bg: string; text: str
   escalate_when: { label: 'Escalate When', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
 };
 
+function parseRuleField(rule: ParsedRule, line: string) {
+  const colonIdx = line.indexOf(':');
+  if (colonIdx === -1) return;
+  const key = line.slice(0, colonIdx).trim();
+  let value = line.slice(colonIdx + 1).trim();
+  if (value.startsWith('"') && value.endsWith('"')) {
+    value = value.slice(1, -1);
+  }
+  switch (key) {
+    case 'id': rule.id = value; break;
+    case 'condition': rule.condition = value; break;
+    case 'action': rule.action = value; break;
+    case 'rationale': rule.rationale = value; break;
+    case 'escalate_to': rule.escalate_to = value; break;
+    case 'message': rule.message = value; break;
+  }
+}
+
 function parseYamlRules(yaml: string | null): Record<string, ParsedRule[]> {
   if (!yaml) return {};
   const result: Record<string, ParsedRule[]> = {};
+  const lines = yaml.split('\n');
+  const categories = ['must_always', 'must_never', 'escalate_when'];
 
-  for (const category of ['must_always', 'must_never', 'escalate_when']) {
-    const regex = new RegExp(`${category}:\\s*\\n((?:[ \\t]+-[\\s\\S]*?)(?=\\n\\s{2,}\\w|\\n\\w|$))`, 'm');
-    const match = yaml.match(regex);
-    if (!match) continue;
+  let currentCategory: string | null = null;
+  let currentRule: ParsedRule | null = null;
+  let categoryIndent = -1;
 
-    const block = match[1];
-    const items: ParsedRule[] = [];
-    const itemBlocks = block.split(/\n\s*- /).filter(Boolean);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const indent = line.length - line.trimStart().length;
 
-    for (const itemBlock of itemBlocks) {
-      const rule: ParsedRule = {};
-      const idMatch = itemBlock.match(/id:\s*(.+)/);
-      const condMatch = itemBlock.match(/condition:\s*"?([^"\n]+)"?/);
-      const actMatch = itemBlock.match(/action:\s*"?([^"\n]+)"?/);
-      const ratMatch = itemBlock.match(/rationale:\s*"?([^"\n]+)"?/);
-      const escMatch = itemBlock.match(/escalate_to:\s*"?([^"\n]+)"?/);
-      const msgMatch = itemBlock.match(/message:\s*"?([^"\n]+)"?/);
-
-      if (idMatch) rule.id = idMatch[1].trim();
-      if (condMatch) rule.condition = condMatch[1].trim();
-      if (actMatch) rule.action = actMatch[1].trim();
-      if (ratMatch) rule.rationale = ratMatch[1].trim();
-      if (escMatch) rule.escalate_to = escMatch[1].trim();
-      if (msgMatch) rule.message = msgMatch[1].trim();
-
-      if (Object.keys(rule).length > 0) items.push(rule);
+    // Detect category headers (must_always:, must_never:, escalate_when:)
+    for (const cat of categories) {
+      if (trimmed === `${cat}:`) {
+        // Flush previous rule
+        if (currentCategory && currentRule && Object.keys(currentRule).length > 0) {
+          result[currentCategory]!.push(currentRule);
+        }
+        currentCategory = cat;
+        currentRule = null;
+        categoryIndent = indent;
+        if (!result[cat]) result[cat] = [];
+        break;
+      }
     }
 
-    if (items.length > 0) result[category] = items;
+    if (!currentCategory) continue;
+
+    // If we hit a line at same or lower indent than category, we've left the block
+    if (indent <= categoryIndent && trimmed !== `${currentCategory}:`) {
+      if (currentRule && Object.keys(currentRule).length > 0) {
+        result[currentCategory]!.push(currentRule);
+      }
+      currentCategory = null;
+      currentRule = null;
+      categoryIndent = -1;
+      continue;
+    }
+
+    // New list item (starts with "- ")
+    if (trimmed.startsWith('- ')) {
+      if (currentRule && Object.keys(currentRule).length > 0) {
+        result[currentCategory]!.push(currentRule);
+      }
+      currentRule = {};
+      parseRuleField(currentRule, trimmed.slice(2).trim());
+      continue;
+    }
+
+    // Continuation field of current rule
+    if (currentRule) {
+      parseRuleField(currentRule, trimmed);
+    }
+  }
+
+  // Flush final rule
+  if (currentCategory && currentRule && Object.keys(currentRule).length > 0) {
+    result[currentCategory]!.push(currentRule);
   }
 
   return result;

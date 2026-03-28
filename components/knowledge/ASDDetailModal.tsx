@@ -3,11 +3,11 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  X, Loader2, History, MousePointerClick,
+  X, Loader2, History, MousePointerClick, Shield, Minimize2,
 } from 'lucide-react';
 import type {
   ASDDetail, ASDVersion, ASDVersionListItem, ASDNode,
-  Clarification, NodeType, ASDStatus,
+  Clarification, NodeType, ASDStatus, DerivedContract,
 } from '@/lib/knowledge-types';
 import { mapASDToFlowGraph } from '@/lib/asd-graph-mapper';
 import { useGraphLayout } from '@/hooks/useGraphLayout';
@@ -58,6 +58,7 @@ export default function ASDDetailModal({ asdId, onClose }: Props) {
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [expandedYaml, setExpandedYaml] = useState<{ yaml: string; name: string } | null>(null);
 
   // ── Data fetching ──
 
@@ -125,11 +126,13 @@ export default function ASDDetailModal({ asdId, onClose }: Props) {
 
   // ── Graph layout (memoized) ──
 
+  const allContracts = asd?.contracts ?? [];
+
   const graphData = useMemo(() => {
     if (rawNodes.length === 0) return { nodes: [], edges: [] };
-    const { nodes: rfNodes, edges: rfEdges } = mapASDToFlowGraph(rawNodes, rawEdges);
+    const { nodes: rfNodes, edges: rfEdges } = mapASDToFlowGraph(rawNodes, rawEdges, allContracts);
     return layoutNodes(rfNodes, rfEdges, 'TB');
-  }, [rawNodes, rawEdges, layoutNodes]);
+  }, [rawNodes, rawEdges, allContracts, layoutNodes]);
 
   // ── Selected node detail ──
 
@@ -250,11 +253,15 @@ export default function ASDDetailModal({ asdId, onClose }: Props) {
                     asd={asd}
                     selectedNode={selectedNode}
                     pct={pct}
+                    contracts={allContracts}
                   />
                 )}
 
                 {activeTab === 'contracts' && (
-                  <ContractReviewPanel asdId={asdId} />
+                  <ContractReviewPanel
+                    asdId={asdId}
+                    onExpandYaml={(yaml, name) => setExpandedYaml({ yaml, name })}
+                  />
                 )}
 
                 {activeTab === 'history' && (
@@ -276,6 +283,29 @@ export default function ASDDetailModal({ asdId, onClose }: Props) {
             <p className="text-sm text-red-500">Failed to load ASD details.</p>
           </div>
         )}
+
+        {/* Full-modal YAML overlay */}
+        {expandedYaml && (
+          <div className="absolute inset-0 z-20 bg-white flex flex-col rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 shrink-0">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-violet-600" />
+                <span className="text-sm font-semibold text-gray-900">{expandedYaml.name}</span>
+                <span className="text-[10px] text-gray-400 uppercase tracking-wider">YAML DSL</span>
+              </div>
+              <button
+                onClick={() => setExpandedYaml(null)}
+                className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-900 px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors"
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+                Close
+              </button>
+            </div>
+            <pre className="flex-1 overflow-auto p-6 text-sm font-mono text-gray-700 leading-relaxed bg-gray-50">
+              {expandedYaml.yaml}
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -287,11 +317,16 @@ function OverviewTab({
   asd,
   selectedNode,
   pct,
+  contracts,
 }: {
   asd: ASDDetail;
   selectedNode: ASDNode | null;
   pct: number;
+  contracts: DerivedContract[];
 }) {
+  const nodeContracts = selectedNode
+    ? contracts.filter(c => c.scope_node_ids?.includes(selectedNode.node_id))
+    : [];
   if (!selectedNode) {
     return (
       <div className="space-y-5">
@@ -398,6 +433,80 @@ function OverviewTab({
         <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1">Position</p>
         <span className="text-xs text-gray-500">Step {selectedNode.position_index + 1}</span>
       </div>
+
+      {/* Node contracts */}
+      {nodeContracts.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+            <Shield className="w-3 h-3" />
+            Contracts ({nodeContracts.length})
+          </p>
+          <div className="space-y-2">
+            {nodeContracts.map(c => (
+              <NodeContractCard key={c.id} contract={c} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {nodeContracts.length === 0 && (
+        <div className="text-[11px] text-gray-400 flex items-center gap-1.5 py-2">
+          <Shield className="w-3 h-3" />
+          No contracts for this step
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Node Contract Card (compact) ── */
+
+const CONTRACT_TYPE_STYLE: Record<string, { label: string; bg: string; text: string }> = {
+  must_always:  { label: 'Must Always', bg: 'bg-emerald-50', text: 'text-emerald-700' },
+  must_never:   { label: 'Must Never', bg: 'bg-red-50', text: 'text-red-700' },
+  must_escalate: { label: 'Escalate', bg: 'bg-amber-50', text: 'text-amber-700' },
+};
+
+const SEVERITY_DOT: Record<string, string> = {
+  critical: 'bg-red-500',
+  high: 'bg-orange-400',
+  medium: 'bg-amber-400',
+  low: 'bg-gray-400',
+};
+
+function NodeContractCard({ contract }: { contract: DerivedContract }) {
+  const [expanded, setExpanded] = useState(false);
+  const typeStyle = CONTRACT_TYPE_STYLE[contract.contract_type] ?? { label: contract.contract_type, bg: 'bg-gray-50', text: 'text-gray-600' };
+  const sevDot = SEVERITY_DOT[contract.severity ?? 'medium'] ?? 'bg-gray-400';
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full text-left px-2.5 py-2 hover:bg-gray-50/50 transition-colors"
+      >
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', sevDot)} />
+          <span className={cn('text-[9px] font-semibold px-1.5 py-0.5 rounded', typeStyle.bg, typeStyle.text)}>
+            {typeStyle.label}
+          </span>
+          <span className={cn('text-[9px] px-1.5 py-0.5 rounded', contract.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500')}>
+            {contract.status}
+          </span>
+        </div>
+        <p className="text-[11px] font-medium text-gray-900">{contract.contract_name}</p>
+        {!expanded && (
+          <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">{contract.description}</p>
+        )}
+      </button>
+      {expanded && (
+        <div className="border-t border-gray-100 px-2.5 py-2 space-y-1.5">
+          <p className="text-[11px] text-gray-600 leading-relaxed">{contract.description}</p>
+          {contract.source_text && (
+            <p className="text-[10px] text-gray-400 italic leading-relaxed">&ldquo;{contract.source_text.slice(0, 200)}{contract.source_text.length > 200 ? '...' : ''}&rdquo;</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

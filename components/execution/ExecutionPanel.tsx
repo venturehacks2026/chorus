@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import {
   X, Loader2, CheckCircle, XCircle, Clock, Wrench, Brain,
   ArrowRight, ChevronDown, ChevronRight as ChevronR, Shield, Minus, Database,
+  AlertTriangle,
 } from 'lucide-react';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import { useExecutionStore } from '@/stores/executionStore';
@@ -133,20 +134,99 @@ function ToolCallItem({ step }: { step: ExecutionStep }) {
   );
 }
 
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: 'bg-red-100 text-red-700 border-red-200',
+  high: 'bg-orange-100 text-orange-700 border-orange-200',
+  medium: 'bg-amber-100 text-amber-700 border-amber-200',
+  low: 'bg-gray-100 text-gray-600 border-gray-200',
+};
+
+const ACTION_COLORS: Record<string, string> = {
+  BLOCK: 'bg-red-100 text-red-600',
+  ESCALATE: 'bg-amber-100 text-amber-600',
+  LOG: 'bg-gray-100 text-gray-500',
+};
+
 function ContractItem({ step }: { step: ExecutionStep }) {
+  const [open, setOpen] = useState(false);
   const cp = step.payload as ContractCheckPayload;
+  const isDerived = cp.source === 'derived';
+  const hasFailed = cp.result === 'fail';
+  const violatedRules = cp.violated_rules ?? [];
+
+  // Container border color based on result and action
+  const containerStyle = cp.result === 'pass'
+    ? 'bg-emerald-50 border-emerald-100'
+    : cp.violation_action === 'BLOCK'
+      ? 'bg-red-50 border-red-200'
+      : cp.violation_action === 'ESCALATE'
+        ? 'bg-amber-50 border-amber-200'
+        : 'bg-red-50 border-red-100';
+
   return (
-    <div className={cn(
-      'flex gap-2 px-2.5 py-2 rounded-lg my-1 text-xs border',
-      cp.result === 'pass' ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100',
-    )}>
-      {cp.result === 'pass'
-        ? <CheckCircle className="w-3 h-3 text-emerald-500 mt-0.5 flex-shrink-0" />
-        : <XCircle className="w-3 h-3 text-red-400 mt-0.5 flex-shrink-0" />}
-      <div>
-        <p className="font-medium text-gray-800">{cp.description}</p>
-        <p className="text-gray-500 mt-0.5 leading-relaxed">{cp.reasoning}</p>
-      </div>
+    <div className={cn('rounded-lg my-1 text-xs border overflow-hidden', containerStyle)}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-2.5 py-2 text-left"
+      >
+        {cp.result === 'pass'
+          ? <CheckCircle className="w-3 h-3 text-emerald-500 mt-0.5 flex-shrink-0" />
+          : cp.violation_action === 'ESCALATE'
+            ? <AlertTriangle className="w-3 h-3 text-amber-500 mt-0.5 flex-shrink-0" />
+            : <XCircle className="w-3 h-3 text-red-400 mt-0.5 flex-shrink-0" />}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-medium text-gray-800 truncate">
+              {cp.contract_name ?? cp.description}
+            </span>
+            {isDerived && (
+              <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-violet-100 text-violet-600 border border-violet-200 shrink-0">
+                SOP
+              </span>
+            )}
+            {cp.severity && (
+              <span className={cn(
+                'text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border shrink-0',
+                SEVERITY_COLORS[cp.severity] ?? SEVERITY_COLORS.medium,
+              )}>
+                {cp.severity}
+              </span>
+            )}
+            {hasFailed && cp.violation_action && (
+              <span className={cn(
+                'text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0',
+                ACTION_COLORS[cp.violation_action] ?? ACTION_COLORS.LOG,
+              )}>
+                {cp.violation_action}
+              </span>
+            )}
+          </div>
+        </div>
+        {(cp.reasoning || violatedRules.length > 0) && (
+          open ? <ChevronDown className="w-3 h-3 text-gray-300 shrink-0" /> : <ChevronR className="w-3 h-3 text-gray-300 shrink-0" />
+        )}
+      </button>
+      {open && (
+        <div className="px-2.5 pb-2 space-y-1.5">
+          {cp.reasoning && (
+            <p className="text-gray-500 leading-relaxed">{cp.reasoning}</p>
+          )}
+          {violatedRules.length > 0 && (
+            <div className="space-y-1 mt-1">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Violated Rules</p>
+              {violatedRules.map((r) => (
+                <div key={r.id} className="flex items-start gap-1.5 pl-1">
+                  <span className="text-[9px] font-mono text-red-400 mt-0.5 shrink-0">[{r.id}]</span>
+                  <span className="text-gray-600">
+                    <span className="text-[9px] font-semibold uppercase text-gray-400 mr-1">{r.type}:</span>
+                    {r.description}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

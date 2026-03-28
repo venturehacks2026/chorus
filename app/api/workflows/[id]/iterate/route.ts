@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { getAnthropic } from '@/lib/anthropic';
+import { getEnabledSlugs } from '@/lib/enabled-connectors';
 import type { WorkflowGraph } from '@/lib/types';
 
 // ─── Skill definitions (server-side, no imports from client files) ────────────
@@ -41,21 +42,6 @@ Rules:
 - Return ONLY the JSON — no markdown, no explanation
 
 Return format: { "agents": [...], "edges": [...] }`;
-
-// ─── Connector availability ───────────────────────────────────────────────────
-
-const FREE_CONNECTORS = ['web-scraper', 'rss-reader', 'json-api', 'code-executor', 'data-store', 'http', 'memory', 'file-reader'];
-const KEYED_CONNECTORS = ['web-search', 'perplexity', 'parallel-research'];
-
-async function getEnabledSlugs(): Promise<string[]> {
-  try {
-    const supabase = createServerSupabase();
-    const { data } = await supabase.from('connector_secrets').select('slug').in('slug', KEYED_CONNECTORS);
-    return [...FREE_CONNECTORS, ...(data ?? []).map((r: { slug: string }) => r.slug)];
-  } catch {
-    return FREE_CONNECTORS;
-  }
-}
 
 // ─── Route handler ────────────────────────────────────────────────────────────
 

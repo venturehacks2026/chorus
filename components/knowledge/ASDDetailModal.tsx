@@ -1,16 +1,19 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  X, Loader2, History, MousePointerClick, Shield, Minimize2,
+  X, Loader2, History, MousePointerClick, Shield, Minimize2, Rocket,
 } from 'lucide-react';
 import type {
   ASDDetail, ASDVersion, ASDVersionListItem, ASDNode,
   Clarification, NodeType, ASDStatus, DerivedContract,
 } from '@/lib/knowledge-types';
+import type { AgentNodeData } from '@/lib/types';
 import { mapASDToFlowGraph } from '@/lib/asd-graph-mapper';
 import { useGraphLayout } from '@/hooks/useGraphLayout';
+import { useWorkflowStore } from '@/stores/workflowStore';
 import ReadonlyFlowGraph from './ReadonlyFlowGraph';
 import ContractReviewPanel from './ContractReviewPanel';
 import ClarificationItem from './ClarificationItem';
@@ -53,12 +56,17 @@ interface Props {
 
 export default function ASDDetailModal({ asdId, onClose }: Props) {
   const qc = useQueryClient();
+  const router = useRouter();
   const { layoutNodes } = useGraphLayout();
+  const addStreamedAgent = useWorkflowStore((s) => s.addStreamedAgent);
+  const loadGraph = useWorkflowStore((s) => s.loadGraph);
 
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [expandedYaml, setExpandedYaml] = useState<{ yaml: string; name: string } | null>(null);
+  const [deploying, setDeploying] = useState(false);
+  const [deployError, setDeployError] = useState<string | null>(null);
 
   // ── Data fetching ──
 
@@ -113,6 +121,75 @@ export default function ASDDetailModal({ asdId, onClose }: Props) {
       qc.invalidateQueries({ queryKey: ['asds'] });
     },
   });
+
+  // ── Deploy as Workflow ──
+
+  const handleDeploy = useCallback(async () => {
+    if (deploying || !asd) return;
+    setDeploying(true);
+    setDeployError(null);
+    loadGraph('__building__', { agents: [], edges: [] });
+
+    try {
+      const res = await fetch('/api/workflows/deploy-asd', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ asdId }),
+      });
+
+      if (!res.ok || !res.body) {
+        setDeployError('Failed to start deployment');
+        setDeploying(false);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      let workflowId: string | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split('\n\n');
+        buf = parts.pop() ?? '';
+
+        for (const chunk of parts) {
+          const line = chunk.replace(/^data:\s*/, '').trim();
+          if (!line) continue;
+          try {
+            const event = JSON.parse(line) as {
+              type: string;
+              workflowId?: string;
+              agent?: AgentNodeData;
+              message?: string;
+            };
+            if (event.type === 'created' && event.workflowId) {
+              workflowId = event.workflowId;
+            }
+            if (event.type === 'agent' && event.agent) {
+              addStreamedAgent(event.agent);
+            }
+            if (event.type === 'done' && workflowId) {
+              setDeploying(false);
+              onClose();
+              router.push(`/workflows/${workflowId}`);
+            }
+            if (event.type === 'error') {
+              setDeployError(event.message ?? 'Generation failed');
+              setDeploying(false);
+            }
+          } catch {
+            // ignore partial chunk parse errors
+          }
+        }
+      }
+    } catch (err) {
+      setDeployError(String(err));
+      setDeploying(false);
+    }
+  }, [deploying, asd, asdId, router, onClose, addStreamedAgent, loadGraph]);
 
   // ── Derived data ──
 
@@ -177,13 +254,46 @@ export default function ASDDetailModal({ asdId, onClose }: Props) {
               </div>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {asd && asd.status === 'active' && (
+              <button
+                onClick={handleDeploy}
+                disabled={deploying}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                  deploying
+                    ? 'bg-violet-100 text-violet-400 cursor-not-allowed'
+                    : 'bg-violet-600 hover:bg-violet-700 text-white shadow-sm',
+                )}
+              >
+                {deploying ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Deploying...
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="w-3 h-3" />
+                    Deploy as Workflow
+                  </>
+                )}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
+
+        {/* Deploy error banner */}
+        {deployError && (
+          <div className="px-6 py-2 bg-red-50 border-b border-red-100 shrink-0">
+            <p className="text-xs text-red-600">{deployError}</p>
+          </div>
+        )}
 
         {/* ── Body ── */}
         {isLoading ? (

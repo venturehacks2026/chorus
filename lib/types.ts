@@ -14,6 +14,7 @@ export interface Workflow {
   nl_prompt: string | null;
   graph_json: WorkflowGraph;
   status: WorkflowStatus;
+  source_asd_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -130,6 +131,11 @@ export interface ContractCheckPayload {
   description: string;
   result: ContractResult;
   reasoning: string;
+  source?: 'workflow' | 'derived';
+  severity?: 'critical' | 'high' | 'medium' | 'low';
+  violated_rules?: Array<{ id: string; type: string; description: string }>;
+  violation_action?: 'BLOCK' | 'ESCALATE' | 'LOG';
+  contract_name?: string;
 }
 
 export interface RoutingPayload {

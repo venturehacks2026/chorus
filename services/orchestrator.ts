@@ -2,6 +2,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { WorkflowGraph, AgentNodeData, Contract, StepKind } from '@/lib/types';
 import { validateContracts } from './contract-validator';
+import { enforceDerivedContracts } from './derived-contract-enforcer';
+import type { DerivedContractRow } from './derived-contract-enforcer';
 import type { ConnectorRegistry } from '@/connectors/registry';
 
 export interface OrchestratorDeps {
@@ -145,6 +147,7 @@ async function runAgent(
   executionId: string,
   workflowId: string,
   deps: OrchestratorDeps,
+  activeDerivedContracts?: DerivedContractRow[],
 ): Promise<{ output: string; failed: boolean }> {
   const { supabase, anthropic, connectors } = deps;
 
@@ -283,6 +286,45 @@ async function runAgent(
     for (const cr of results) {
       const c = (contracts as Contract[]).find(x => x.id === cr.contractId);
       if (c?.blocking && cr.result === 'fail') {
+        await supabase
+          .from('agent_executions')
+          .update({ status: 'failed' })
+          .eq('id', agentExec.id);
+        return { output: finalOutput, failed: true };
+      }
+    }
+  }
+
+  // Enforce derived contracts (ASD-based SOP contracts)
+  if (activeDerivedContracts?.length) {
+    const derivedResults = await enforceDerivedContracts(
+      finalOutput, agentExec.id, anthropic, supabase, activeDerivedContracts,
+    );
+
+    for (const dr of derivedResults) {
+      await insertStep(supabase, agentExec.id, 'contract_check', {
+        contract_id: dr.contractId,
+        contract_name: dr.contractName,
+        description: dr.contractName,
+        result: dr.result,
+        reasoning: dr.reasoning,
+        source: 'derived',
+        severity: dr.severity,
+        violated_rules: dr.violatedRules,
+        violation_action: dr.violationAction,
+      });
+
+      if (dr.shouldEscalate) {
+        await insertStep(supabase, agentExec.id, 'routing', {
+          message: `[ESCALATION] Contract "${dr.contractName}" violated — needs escalation`,
+        });
+      }
+
+      if (dr.shouldBlock) {
+        await supabase
+          .from('agent_executions')
+          .update({ status: 'failed' })
+          .eq('id', agentExec.id);
         return { output: finalOutput, failed: true };
       }
     }
@@ -301,6 +343,13 @@ export async function runWorkflow(workflowId: string, deps: OrchestratorDeps): P
   if (!workflow) throw new Error(`Workflow not found: ${workflowId}`);
 
   const graph = workflow.graph_json as WorkflowGraph;
+
+  // Prefetch all active derived contracts (ASD-based SOP contracts) once per execution
+  const { data: activeDerivedContracts } = await supabase
+    .from('derived_contracts')
+    .select('*')
+    .eq('status', 'active')
+    .not('dsl_yaml', 'is', null);
 
   const { data: execution } = await supabase
     .from('executions')
@@ -322,13 +371,13 @@ export async function runWorkflow(workflowId: string, deps: OrchestratorDeps): P
 
       if (stage.length === 1) {
         // Sequential: run single agent
-        const result = await runAgent(stage[0], context, execution.id, workflowId, deps);
+        const result = await runAgent(stage[0], context, execution.id, workflowId, deps, (activeDerivedContracts ?? []) as DerivedContractRow[]);
         if (result.failed) { failed = true; break; }
         context = result.output;
       } else {
         // Parallel: run all agents in stage concurrently with the same context
         const results = await Promise.all(
-          stage.map(agent => runAgent(agent, context, execution.id, workflowId, deps))
+          stage.map(agent => runAgent(agent, context, execution.id, workflowId, deps, (activeDerivedContracts ?? []) as DerivedContractRow[]))
         );
         if (results.some(r => r.failed)) { failed = true; break; }
         // Merge outputs for next stage

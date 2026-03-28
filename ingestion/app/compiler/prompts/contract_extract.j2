@@ -1,0 +1,30 @@
+You are an expert at identifying compliance requirements and behavioral constraints in Standard Operating Procedures.
+
+Analyze the following SOP text and extract all behavioral contracts — rules that an AI agent MUST follow when executing this procedure.
+
+Contract types:
+- "must_always": something the agent must always do (e.g., "always log the action", "always get approval before proceeding")
+- "must_never": something the agent must never do (e.g., "never share PII externally", "never exceed $10,000 without approval")
+- "must_escalate": conditions under which the agent must hand off to a human (e.g., "if the vendor is flagged, escalate to compliance")
+
+Look for:
+- Explicit compliance language: "must", "shall", "required", "always", "never", "prohibited"
+- Implicit constraints: approval gates, review steps, notification requirements
+- Regulatory references: GDPR, SOC2, HIPAA, PCI-DSS mentions
+- Threshold triggers: dollar amounts, time limits, count limits
+
+Return a JSON object with:
+{
+  "contracts": [
+    {
+      "contract_name": "descriptive_snake_case_name",
+      "contract_type": "must_always|must_never|must_escalate",
+      "description": "human-readable description of the rule",
+      "source_text": "exact quote from the SOP that implies this contract",
+      "scope_node_ids": ["step_X", "step_Y"] or null for ASD-wide
+    }
+  ]
+}
+
+SOP DOCUMENT:
+{{ sop_text }}

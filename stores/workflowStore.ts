@@ -45,7 +45,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       target: e.target_agent_id,
       label: e.label,
       type: 'smoothstep',
-      style: { stroke: '#D6CCC2', strokeWidth: 1.5 },
+      style: { stroke: '#7c3aed', strokeWidth: 1.5 },
     }));
 
     set({ nodes, edges, workflowId, selectedAgentId: null });

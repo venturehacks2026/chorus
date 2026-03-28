@@ -32,12 +32,12 @@ export default function WorkflowCanvas({ readonly = false }: { readonly?: boolea
 
   const onConnect = useCallback(
     (connection: Connection) =>
-      setEdges(addEdge({ ...connection, type: 'smoothstep', style: { stroke: '#D6CCC2', strokeWidth: 1.5 } }, edges)),
+      setEdges(addEdge({ ...connection, type: 'smoothstep', style: { stroke: '#7c3aed', strokeWidth: 1.5 } }, edges)),
     [edges, setEdges],
   );
 
   return (
-    <div className="w-full h-full bg-bg">
+    <div className="w-full h-full bg-gray-50">
       <EdgeMarkerDefs />
       <ReactFlow
         nodes={nodes}
@@ -52,18 +52,18 @@ export default function WorkflowCanvas({ readonly = false }: { readonly?: boolea
         nodesDraggable={!readonly}
         nodesConnectable={!readonly}
         proOptions={{ hideAttribution: true }}
-        className="bg-bg"
+        className="bg-gray-50"
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#D6CCC2" />
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e5e7eb" />
         <Controls />
-        <MiniMap nodeColor="#D5BDAF" maskColor="rgba(237,237,233,0.7)" />
+        <MiniMap nodeColor="#ede9fe" maskColor="rgba(249,249,251,0.85)" />
         <Panel position="top-right">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSopViewerOpen(!sopViewerOpen)}
               title="Toggle SOP document viewer"
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                sopViewerOpen ? 'bg-sand-400/20 text-sand-700 border-sand-300' : 'bg-bg border-border text-text-muted hover:text-text'
+                sopViewerOpen ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-white border-gray-200 text-gray-500 hover:text-gray-900'
               }`}
             >
               <FileText className="w-3 h-3" />

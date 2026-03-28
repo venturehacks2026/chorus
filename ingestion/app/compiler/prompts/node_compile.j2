@@ -1,0 +1,42 @@
+You are an expert at compiling procedural steps into typed Agent Skill Document (ASD) nodes.
+
+Given the following raw procedural steps extracted from an SOP, compile each step into a fully specified ASD node.
+
+Node types and their required fields:
+- "action": requires tool (the tool/system to call, e.g. "email.send", "crm.update"), required_inputs (list of input fields), output_schema (dict of output field names to types)
+- "decision": requires condition (boolean expression), true_branch (step id), false_branch (step id)
+- "human_handoff": requires escalate_to (role or team), message_template (template string with {variable} placeholders)
+- "wait": requires trigger_type ("timer" or "external_event"), duration or event_name
+- "start": requires nothing extra
+- "end": requires outcome ("success" or "failure")
+- "error": requires error_type, recovery_action
+
+Also for each node:
+- Assess if the step is ambiguous or unclear. If so, generate a clarification question.
+- Assess if the step cannot be automated (requires physical action, missing system access, requires human judgment). If so, mark it as an automation gap.
+
+Return a JSON object with:
+{
+  "nodes": [
+    {
+      "node_id": "step_1",
+      "type": "action|decision|human_handoff|wait|start|end|error",
+      "description": "...",
+      "config": { ... type-specific fields ... },
+      "confidence_score": 0.0-1.0,
+      "needs_clarification": true/false,
+      "is_automation_gap": true/false,
+      "automation_gap_reason": "..." or null
+    }
+  ],
+  "clarifications": [
+    {
+      "node_id": "step_X",
+      "question": "...",
+      "context": "relevant excerpt from SOP"
+    }
+  ]
+}
+
+RAW STEPS:
+{{ steps_json }}

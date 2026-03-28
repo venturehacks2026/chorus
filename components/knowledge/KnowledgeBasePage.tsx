@@ -75,6 +75,7 @@ export default function KnowledgeBasePage() {
       }).then(r => r.json()),
     onSuccess: (data, variables) => {
       qc.invalidateQueries({ queryKey: ['sops'] });
+      qc.invalidateQueries({ queryKey: ['sop-documents'] });
       setUploadOpen(false);
       if (data?.id) {
         extractContractsFromSop({ id: data.id, title: variables.title, content: variables.content });
@@ -90,6 +91,7 @@ export default function KnowledgeBasePage() {
       }).then(r => r.json()),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['sops'] });
+      qc.invalidateQueries({ queryKey: ['sop-documents'] });
       setUploadOpen(false);
       if (data?.id) {
         extractContractsFromSop({ id: data.id, title: data.title ?? 'Uploaded SOP' });
@@ -121,6 +123,7 @@ export default function KnowledgeBasePage() {
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['sops'] });
+      qc.invalidateQueries({ queryKey: ['sop-documents'] });
       qc.invalidateQueries({ queryKey: ['asds'] });
       setDeletingSopId(null);
     },

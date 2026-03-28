@@ -88,7 +88,7 @@ function sse(data: unknown) {
 }
 
 export async function POST(req: Request) {
-  const body = await req.json() as { name: string; nl_prompt: string };
+  const body = await req.json() as { name: string; nl_prompt: string; context_sop?: string };
 
   if (!body.name || !body.nl_prompt) {
     return NextResponse.json({ error: 'name and nl_prompt are required' }, { status: 400 });
@@ -97,6 +97,15 @@ export async function POST(req: Request) {
   const supabase = createServerSupabase();
   const registry = getRegistry();
   const slugs = Array.from(registry.keys());
+
+  let docContext = '';
+  if (body.context_sop?.trim()) {
+    const text = body.context_sop.slice(0, 12000);
+    docContext =
+      '\n\n━━━ ATTACHED SOP DOCUMENT ━━━\n' +
+      text +
+      '\n━━━ END SOP DOCUMENT ━━━\n\nUse this SOP as the source of truth when designing the workflow.\n\n';
+  }
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -132,7 +141,7 @@ export async function POST(req: Request) {
           system: SYSTEM_PROMPT,
           messages: [{
             role: 'user',
-            content: `Available connectors: ${slugs.join(', ')}\n\nTask: ${body.nl_prompt}`,
+            content: `Available connectors: ${slugs.join(', ')}\n\nTask: ${body.nl_prompt}${docContext}`,
           }],
         });
 

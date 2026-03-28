@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Key, Check, X, Eye, EyeOff, Loader2, ExternalLink } from 'lucide-react';
+import { Key, Check, X, Eye, EyeOff, Loader2, ExternalLink, Zap } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 // ─── Only connectors that require an API key are shown ───────────────────────
@@ -9,41 +9,33 @@ import { cn } from '@/lib/cn';
 // tools that just work — they don't belong in a "marketplace" UI.
 
 interface ConnectorMeta {
-  domain: string;          // used for icon.horse logo fetch
-  displayName: string;     // shown on card
+  slug: string;
+  logo: string;            // path to logo in /public/logos/
+  displayName: string;
   category: string;
   description: string;
   secretLabel: string;
   secretPlaceholder: string;
   docsUrl: string;
-  slug: string;
 }
+
+const BF_CID = '1idCv-KTv3UTSYVo2pK';
 
 // Only API-key-gated connectors appear here
 const KEYED_CONNECTORS: ConnectorMeta[] = [
   {
-    slug: 'web-search',
-    domain: 'brave.com',
-    displayName: 'Brave Search',
-    category: 'Search',
-    description: 'Real-time web search powered by Brave — privacy-first, no tracking, independent index.',
-    secretLabel: 'Brave Search API Key',
-    secretPlaceholder: 'BSAxxxxxxxxxxxxxxxxxxxx…',
-    docsUrl: 'https://brave.com/search/api/',
-  },
-  {
     slug: 'parallel-research',
-    domain: 'brave.com',
-    displayName: 'Parallel Research',
+    logo: `/logos/parallel.png`,
+    displayName: 'Parallel Web Systems',
     category: 'Search',
-    description: 'Run multiple Brave searches concurrently and merge deduplicated results — faster broad research.',
-    secretLabel: 'Brave Search API Key',
-    secretPlaceholder: 'BSAxxxxxxxxxxxxxxxxxxxx…',
-    docsUrl: 'https://brave.com/search/api/',
+    description: 'Run multiple searches concurrently across sources and merge deduplicated results — faster, broader research.',
+    secretLabel: 'Parallel API Key',
+    secretPlaceholder: 'par-xxxxxxxxxxxxxxxxxxxx…',
+    docsUrl: 'https://platform.parallel.ai',
   },
   {
     slug: 'perplexity',
-    domain: 'perplexity.ai',
+    logo: `https://cdn.brandfetch.io/perplexity.ai/w/80/h/80/icon?c=${BF_CID}&fallback=lettermark`,
     displayName: 'Perplexity',
     category: 'Research',
     description: 'Deep research queries with cited sources via Perplexity Sonar — best for nuanced, cited answers.',
@@ -53,52 +45,37 @@ const KEYED_CONNECTORS: ConnectorMeta[] = [
   },
 ];
 
-// ─── Logo component using Brandfetch API (server-proxied) ────────────────────
+// ─── Logo ─────────────────────────────────────────────────────────────────────
 
-function ServiceLogo({ domain, size = 32 }: { domain: string; size?: number }) {
-  const [iconUrl, setIconUrl] = useState<string | null>(null);
+function ServiceLogo({ logo, name, size = 40 }: { logo: string; name: string; size?: number }) {
   const [errored, setErrored] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch(`/api/brand?domain=${encodeURIComponent(domain)}`)
-      .then(r => r.json())
-      .then(({ iconUrl: url }: { iconUrl: string | null }) => {
-        setIconUrl(url);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [domain]);
-
-  if (loading) {
+  if (errored) {
     return (
       <div
-        className="rounded-xl bg-gray-100 animate-pulse shrink-0"
-        style={{ width: size, height: size }}
-      />
-    );
-  }
-
-  if (!iconUrl || errored) {
-    return (
-      <div
-        className="rounded-xl bg-violet-100 flex items-center justify-center font-bold text-violet-600 uppercase shrink-0"
-        style={{ width: size, height: size, fontSize: size * 0.38 }}
+        className="rounded-xl bg-violet-100 flex items-center justify-center font-bold text-violet-700 uppercase shrink-0 select-none"
+        style={{ width: size, height: size, fontSize: size * 0.4 }}
       >
-        {domain[0]}
+        {name[0]}
       </div>
     );
   }
 
   return (
-    <img
-      src={iconUrl}
-      alt={domain}
-      width={size}
-      height={size}
-      className="rounded-xl object-contain shrink-0"
-      onError={() => setErrored(true)}
-    />
+    <div
+      className="rounded-xl overflow-hidden shrink-0 flex items-center justify-center bg-gray-50"
+      style={{ width: size, height: size }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={logo}
+        alt={name}
+        width={size}
+        height={size}
+        className="object-contain w-full h-full"
+        onError={() => setErrored(true)}
+      />
+    </div>
   );
 }
 
@@ -150,7 +127,7 @@ function ApiKeyModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <ServiceLogo domain={meta.domain} size={36} />
+            <ServiceLogo logo={meta.logo} name={meta.displayName} size={36} />
             <div>
               <p className="font-semibold text-sm text-gray-900">{meta.displayName}</p>
               <a
@@ -227,6 +204,8 @@ function ApiKeyModal({
 
 // ─── Connector Card ───────────────────────────────────────────────────────────
 
+type TestState = 'idle' | 'testing' | 'success' | 'fail';
+
 function ConnectorCard({
   meta,
   keyUpdateTick,
@@ -238,9 +217,12 @@ function ConnectorCard({
 }) {
   const [hasKey, setHasKey] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [testState, setTestState] = useState<TestState>('idle');
+  const [testMsg, setTestMsg] = useState('');
 
   useEffect(() => {
     setChecking(true);
+    setTestState('idle');
     fetch(`/api/connectors/secrets/${meta.slug}`)
       .then(r => r.json())
       .then(({ exists }: { exists: boolean }) => setHasKey(exists))
@@ -248,17 +230,38 @@ function ConnectorCard({
       .finally(() => setChecking(false));
   }, [meta.slug, keyUpdateTick]);
 
+  async function runTest() {
+    setTestState('testing');
+    setTestMsg('');
+    try {
+      const res = await fetch('/api/connectors/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: meta.slug }),
+      });
+      const data = await res.json() as { ok: boolean; message: string };
+      setTestState(data.ok ? 'success' : 'fail');
+      setTestMsg(data.message ?? '');
+      // Auto-reset after 4 s
+      setTimeout(() => { setTestState('idle'); setTestMsg(''); }, 4000);
+    } catch {
+      setTestState('fail');
+      setTestMsg('Request failed — check your connection.');
+      setTimeout(() => { setTestState('idle'); setTestMsg(''); }, 4000);
+    }
+  }
+
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col gap-4 hover:border-gray-200 hover:shadow-sm transition-all duration-150">
-      {/* Logo + name */}
+      {/* Logo + name + connected badge */}
       <div className="flex items-center gap-3">
-        <ServiceLogo domain={meta.domain} size={40} />
+        <ServiceLogo logo={meta.logo} name={meta.displayName} size={40} />
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm text-gray-900">{meta.displayName}</p>
           <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{meta.category}</span>
         </div>
-        {hasKey && !checking && (
-          <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+        {!checking && hasKey && (
+          <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0" title="Connected">
             <Check className="w-3 h-3 text-emerald-600" strokeWidth={3} />
           </div>
         )}
@@ -267,36 +270,59 @@ function ConnectorCard({
       {/* Description */}
       <p className="text-xs text-gray-500 leading-relaxed flex-1">{meta.description}</p>
 
-      {/* Key action */}
-      <div className="pt-1 border-t border-gray-50">
-        {checking ? (
-          <div className="flex items-center gap-1.5 h-9">
-            <Loader2 className="w-3.5 h-3.5 text-gray-300 animate-spin" />
-            <span className="text-xs text-gray-400">Checking…</span>
-          </div>
-        ) : hasKey ? (
-          <div className="flex items-center justify-between h-9">
-            <div className="flex items-center gap-1.5">
-              <Check className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.5} />
-              <span className="text-xs text-emerald-600 font-medium">Connected</span>
-            </div>
-            <button
-              onClick={() => onAddKey(meta)}
-              className="text-[11px] text-gray-400 hover:text-violet-600 transition-colors"
-            >
-              Update key
-            </button>
-          </div>
-        ) : (
+      {/* Actions */}
+      {checking ? (
+        <div className="flex items-center gap-1.5 h-9">
+          <Loader2 className="w-3.5 h-3.5 text-gray-300 animate-spin" />
+          <span className="text-xs text-gray-400">Checking…</span>
+        </div>
+      ) : hasKey ? (
+        <div className="flex flex-col gap-2">
+          {/* Update key — top */}
           <button
             onClick={() => onAddKey(meta)}
-            className="flex items-center justify-center gap-2 w-full h-9 rounded-xl border border-dashed border-gray-200 text-xs text-gray-400 hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50/40 transition-all font-medium"
+            className="text-[10px] text-gray-400 hover:text-violet-600 transition-colors text-center"
           >
-            <Key className="w-3.5 h-3.5" />
-            Add API key
+            Update key
           </button>
-        )}
-      </div>
+
+          {/* Test connection — below */}
+          <button
+            onClick={runTest}
+            disabled={testState === 'testing'}
+            className={cn(
+              'flex items-center justify-center gap-2 w-full h-9 rounded-xl text-xs font-medium transition-all',
+              testState === 'idle'     && 'border border-gray-200 text-gray-500 hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50/40',
+              testState === 'testing'  && 'border border-gray-200 text-gray-400 cursor-wait',
+              testState === 'success'  && 'bg-emerald-50 border border-emerald-200 text-emerald-700',
+              testState === 'fail'     && 'bg-red-50 border border-red-200 text-red-600',
+            )}
+          >
+            {testState === 'testing' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            {testState === 'fail'    && <X className="w-3.5 h-3.5" />}
+            {testState === 'idle'    && <Zap className="w-3.5 h-3.5" />}
+            {testState === 'idle'    && 'Test connection'}
+            {testState === 'testing' && 'Testing…'}
+            {testState === 'success' && 'Connected'}
+            {testState === 'success' && <Check className="w-3.5 h-3.5" strokeWidth={2.5} />}
+            {testState === 'fail'    && 'Failed'}
+          </button>
+
+          {testMsg && (
+            <p className={cn('text-[10px] leading-relaxed text-center', testState === 'success' ? 'text-emerald-600' : 'text-red-500')}>
+              {testMsg}
+            </p>
+          )}
+        </div>
+      ) : (
+        <button
+          onClick={() => onAddKey(meta)}
+          className="flex items-center justify-center gap-2 w-full h-9 rounded-xl border border-dashed border-gray-200 text-xs text-gray-400 hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50/40 transition-all font-medium"
+        >
+          <Key className="w-3.5 h-3.5" />
+          Add API key
+        </button>
+      )}
     </div>
   );
 }

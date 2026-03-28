@@ -77,8 +77,7 @@ async function insertStep(
 
 // Env-var fallback map (connector slug → env var names)
 const SECRET_ENV_MAP: Record<string, string[]> = {
-  'web-search':        ['BRAVE_API_KEY'],
-  'parallel-research': ['BRAVE_API_KEY'],
+  'parallel-research': ['PARALLEL_API_KEY'],
   'perplexity':        ['PERPLEXITY_API_KEY'],
 };
 
@@ -94,7 +93,6 @@ function getSecretsFromEnv(connectorSlug: string): Record<string, string> {
 
 async function getSecrets(connectorSlug: string, supabase: SupabaseClient): Promise<Record<string, string>> {
   try {
-    // Check DB first — keys saved via Marketplace UI
     const { data } = await supabase
       .from('connector_secrets')
       .select('secret_value')
@@ -102,7 +100,6 @@ async function getSecrets(connectorSlug: string, supabase: SupabaseClient): Prom
       .single();
 
     if (data?.secret_value) {
-      // Map to the expected lowercase key name(s) for this connector
       const envKeys = SECRET_ENV_MAP[connectorSlug] ?? [];
       const result: Record<string, string> = {};
       for (const key of envKeys) {

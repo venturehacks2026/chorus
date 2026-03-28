@@ -1,14 +1,12 @@
 """HTTP endpoints for contract generation and human review."""
 
-import json
 import logging
 import uuid
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 
-from app.contract_gen.checks import check_activation_gate, check_coverage, check_executability
-from app.contract_gen.dsl import parse_and_validate, serialize_yaml
+from app.contract_gen.checks import check_activation_gate, check_executability
+from app.contract_gen.dsl import parse_and_validate
 from app.contract_gen.pipeline import run_contract_gen_pipeline
 from app.contract_gen.schemas import (
     ActivationGateResponse,

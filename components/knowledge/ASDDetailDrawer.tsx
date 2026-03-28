@@ -2,8 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, Loader2, ArrowRight } from 'lucide-react';
-import type { ASDDetail, Clarification, NodeType, EdgeType, ContractType, ASDStatus } from '@/lib/knowledge-types';
+import type { ASDDetail, Clarification, NodeType, EdgeType, ASDStatus } from '@/lib/knowledge-types';
 import ClarificationItem from './ClarificationItem';
+import ContractReviewPanel from './ContractReviewPanel';
 import { cn } from '@/lib/cn';
 
 const NODE_STYLE: Record<NodeType, string> = {
@@ -21,12 +22,6 @@ const EDGE_STYLE: Record<EdgeType, string> = {
   true_branch:   'text-emerald-600',
   false_branch:  'text-red-500',
   error_handler: 'text-amber-500',
-};
-
-const CONTRACT_STYLE: Record<ContractType, string> = {
-  must_always:   'bg-emerald-50 text-emerald-700',
-  must_never:    'bg-red-50 text-red-600',
-  must_escalate: 'bg-amber-50 text-amber-600',
 };
 
 const STATUS_STYLE: Record<ASDStatus, string> = {
@@ -81,7 +76,6 @@ export default function ASDDetailDrawer({ asdId, onClose }: Props) {
   const version = asd?.latest_version;
   const nodes = version?.nodes ?? [];
   const edges = version?.edges ?? [];
-  const contracts = asd?.contracts ?? [];
   const coverage = asd?.automation_coverage_score ?? 0;
   const pct = Math.round(coverage * 100);
 
@@ -197,26 +191,12 @@ export default function ASDDetailDrawer({ asdId, onClose }: Props) {
               )}
 
               {/* contracts */}
-              {contracts.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">
-                    Contracts <span className="text-gray-400 font-normal">({contracts.length})</span>
-                  </p>
-                  <div className="space-y-2">
-                    {contracts.map(c => (
-                      <div key={c.id} className="border border-gray-200 rounded-lg px-3 py-2.5 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded', CONTRACT_STYLE[c.contract_type])}>
-                            {c.contract_type}
-                          </span>
-                          <span className="text-xs font-medium text-gray-900">{c.contract_name}</span>
-                        </div>
-                        <p className="text-[11px] text-gray-500 leading-relaxed">{c.description}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">
+                  Contracts
+                </p>
+                <ContractReviewPanel asdId={asdId} />
+              </div>
 
               {/* clarifications */}
               {clarifications.length > 0 && (

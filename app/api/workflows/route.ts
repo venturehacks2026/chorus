@@ -4,14 +4,18 @@ import { getAnthropic } from '@/lib/anthropic';
 import { parseNlToWorkflow } from '@/services/nl-parser';
 
 export async function GET() {
-  const supabase = createServerSupabase();
-  const { data, error } = await supabase
-    .from('workflows')
-    .select('*')
-    .order('created_at', { ascending: false });
+  try {
+    const supabase = createServerSupabase();
+    const { data, error } = await supabase
+      .from('workflows')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data ?? []);
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {

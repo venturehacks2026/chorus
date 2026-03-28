@@ -29,7 +29,11 @@ export default function Dashboard() {
 
   const { data: workflows = [], isLoading, isError } = useQuery<Workflow[]>({
     queryKey: ['workflows'],
-    queryFn: () => fetch('/api/workflows').then(r => r.json()),
+    queryFn: async () => {
+      const res = await fetch('/api/workflows');
+      const json = await res.json();
+      return Array.isArray(json) ? json : [];
+    },
   });
 
   const create = useMutation({

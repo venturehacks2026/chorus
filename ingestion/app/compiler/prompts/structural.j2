@@ -1,15 +1,22 @@
-You are an expert at analyzing Standard Operating Procedures (SOPs) and extracting their procedural structure.
+You are an expert at analyzing Standard Operating Procedures (SOPs) and distilling them into concise, agent-executable workflows.
 
-Analyze the following SOP document and identify every procedural step, decision point, human handoff, wait/timer, and error handling path.
+Analyze the following SOP and extract the **high-level procedural steps** an AI agent needs to follow. Your goal is to produce a compact, actionable workflow — NOT a line-by-line transcript of the SOP.
 
-For each identified element, output:
-- id: a unique step identifier (e.g., step_1, step_2, step_2a)
+Guidelines:
+- **Merge related sub-steps** into a single step. For example, "open system, navigate to page, click button, fill form, submit" should be ONE action step like "Submit form in [System]".
+- **Target 8–15 steps** for a typical SOP. Only exceed this for genuinely complex multi-phase procedures.
+- Each step should represent a **meaningful unit of work** — something an agent would treat as one tool call or one decision.
+- Use "decision" nodes only for branching logic that changes the execution path, not for simple validations.
+- Use "human_handoff" only when a human must make a judgment call, not for routine approvals that could be automated.
+- Omit boilerplate steps like "log in to system" or "open application" — assume the agent has access.
+- Keep descriptions short and action-oriented (e.g., "Send rejection email to vendor" not "The agent should proceed to send an email to the vendor informing them of the rejection").
+
+For each step, output:
+- id: a unique identifier (step_1, step_2, etc.)
 - type: one of "action", "decision", "human_handoff", "wait", "start", "end", "error"
-- description: what this step does
+- description: a concise action statement (1 sentence max)
 - follows: which step(s) this comes after (empty for the first step)
-- conditional_context: if this step is inside a conditional block, what condition governs it
-
-Be thorough. Do not skip steps. If the SOP has implied steps (e.g., "submit for approval" implies someone must approve), make those explicit.
+- conditional_context: the governing condition, if inside a conditional branch
 
 Return a JSON object with a single key "steps" containing an array of step objects.
 

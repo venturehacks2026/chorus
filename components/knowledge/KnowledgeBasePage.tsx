@@ -117,6 +117,7 @@ export default function KnowledgeBasePage() {
               ) : (
                 <SOPTable
                   sops={sops}
+                  asds={asds}
                   compilingSopIds={compilingSopIds}
                   onCompile={(sopId) => compile.mutate(sopId)}
                 />

@@ -1,21 +1,23 @@
 You are an expert at compiling procedural steps into typed Agent Skill Document (ASD) nodes.
 
-Given the following raw procedural steps extracted from an SOP, compile each step into a fully specified ASD node.
+Given the following procedural steps extracted from an SOP, compile each into a fully specified ASD node. Keep the output concise — each node should map to one agent action or decision.
 
 Node types and their required fields:
-- "action": requires tool (the tool/system to call, e.g. "email.send", "crm.update"), required_inputs (list of input fields), output_schema (dict of output field names to types)
+- "action": requires tool (e.g. "email.send", "crm.update"), required_inputs (list), output_schema (dict of field→type)
 - "decision": requires condition (boolean expression), true_branch (step id), false_branch (step id)
-- "human_handoff": requires escalate_to (role or team), message_template (template string with {variable} placeholders)
+- "human_handoff": requires escalate_to (role), message_template (template with {variable} placeholders)
 - "wait": requires trigger_type ("timer" or "external_event"), duration or event_name
-- "start": requires nothing extra
+- "start": no extra fields
 - "end": requires outcome ("success" or "failure")
 - "error": requires error_type, recovery_action
 
-Also for each node:
-- Assess if the step is ambiguous or unclear. If so, generate a clarification question.
-- Assess if the step cannot be automated (requires physical action, missing system access, requires human judgment). If so, mark it as an automation gap.
+For each node also assess:
+- Is the step ambiguous? If so, generate a clarification question.
+- Can it be automated? If not (physical action, requires human judgment), mark as automation gap.
 
-Return a JSON object with:
+Keep descriptions to one short sentence. Do NOT split a step into multiple nodes — preserve the step count from the input.
+
+Return JSON:
 {
   "nodes": [
     {

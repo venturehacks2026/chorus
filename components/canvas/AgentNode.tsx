@@ -2,7 +2,6 @@
 
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Bot, CheckCircle, XCircle, Loader2, Clock } from 'lucide-react';
 import type { AgentNodeData, AgentStatus } from '@/lib/types';
 import { useExecutionStore } from '@/stores/executionStore';
 import { useWorkflowStore } from '@/stores/workflowStore';
@@ -26,68 +25,64 @@ export const AgentNode = memo(function AgentNode({ data: raw, selected }: NodePr
     if (agentExecId) selectAgentExecution(agentExecId);
   }
 
-  const ringClass = {
-    running: 'border-blue-500/80 shadow-blue-500/20',
-    completed: 'border-emerald-500/60',
-    failed: 'border-red-500/60',
+  const borderClass = {
+    running: 'border-blue-400',
+    completed: 'border-emerald-500',
+    failed: 'border-red-400',
     idle: 'border-border',
-    skipped: 'border-border/50',
+    skipped: 'border-border',
   }[status];
 
-  const StatusIcon = {
-    running: <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />,
-    completed: <CheckCircle className="w-3 h-3 text-emerald-400" />,
-    failed: <XCircle className="w-3 h-3 text-red-400" />,
+  const statusLabel = {
+    running: 'Running',
+    completed: 'Completed',
+    failed: 'Failed',
     idle: null,
     skipped: null,
+  }[status];
+
+  const statusColor = {
+    running: 'text-blue-500',
+    completed: 'text-emerald-600',
+    failed: 'text-red-500',
+    idle: '',
+    skipped: '',
   }[status];
 
   return (
     <div
       onClick={handleClick}
       className={cn(
-        'relative bg-bg-muted border rounded-xl px-4 py-3 min-w-[200px] cursor-pointer select-none',
+        'relative bg-bg border rounded-lg px-4 py-3 min-w-[200px] cursor-pointer select-none shadow-sm',
         'transition-all duration-150',
-        ringClass,
-        status === 'running' && 'shadow-lg',
-        (selected || isActiveExec) && 'ring-1 ring-accent/50',
+        borderClass,
+        status === 'running' && 'shadow-blue-100 shadow-md',
+        (selected || isActiveExec) && 'ring-1 ring-text/20',
       )}
     >
       {status === 'running' && (
-        <span className="absolute inset-0 rounded-xl border border-blue-500/40 animate-pulse-soft pointer-events-none" />
+        <span className="absolute inset-0 rounded-lg border border-blue-300 animate-pulse pointer-events-none" />
       )}
 
-      <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-border !border-border/80" />
-      <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-border !border-border/80" />
+      <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-border !border-bg" />
+      <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-border !border-bg" />
 
-      <div className="flex items-start gap-2.5">
-        <div className={cn(
-          'w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5',
-          status === 'running' ? 'bg-blue-500/15' :
-          status === 'completed' ? 'bg-emerald-500/15' :
-          status === 'failed' ? 'bg-red-500/15' : 'bg-accent-muted',
-        )}>
-          <Bot className={cn(
-            'w-3.5 h-3.5',
-            status === 'running' ? 'text-blue-400' :
-            status === 'completed' ? 'text-emerald-400' :
-            status === 'failed' ? 'text-red-400' : 'text-accent',
-          )} />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 justify-between">
-            <p className="text-sm font-medium text-text truncate">{data.name}</p>
-            {StatusIcon}
-          </div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-text truncate">{data.name}</p>
           <p className="text-xs text-text-subtle mt-0.5 truncate">{data.role}</p>
         </div>
+        {statusLabel && (
+          <span className={cn('text-xs font-medium shrink-0', statusColor)}>
+            {statusLabel}
+          </span>
+        )}
       </div>
 
       {data.tools.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2.5">
           {data.tools.map((t) => (
-            <span key={t.id} className="text-[10px] px-1.5 py-0.5 rounded-md bg-border/60 text-text-subtle font-mono">
+            <span key={t.id} className="text-[10px] px-1.5 py-0.5 rounded bg-bg-muted border border-border text-text-subtle font-mono">
               {t.connector_id}
             </span>
           ))}

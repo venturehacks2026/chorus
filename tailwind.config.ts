@@ -9,33 +9,29 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-geist-sans)', 'Inter', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-geist-mono)', 'JetBrains Mono', 'monospace'],
+        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {
         bg: {
-          DEFAULT: '#09090B',
-          subtle: '#111113',
-          muted: '#18181B',
+          DEFAULT: '#ffffff',
+          subtle: '#fafafa',
+          muted: '#f4f4f6',
         },
         border: {
-          DEFAULT: '#27272A',
-          subtle: '#1F1F22',
+          DEFAULT: '#e4e4e7',
+          subtle: '#f0f0f1',
         },
         text: {
-          DEFAULT: '#FAFAFA',
-          muted: '#A1A1AA',
-          subtle: '#71717A',
+          DEFAULT: '#111111',
+          muted: '#6b7280',
+          subtle: '#9ca3af',
         },
         accent: {
-          DEFAULT: '#6366F1',
-          hover: '#818CF8',
-          muted: 'rgba(99,102,241,0.15)',
+          DEFAULT: '#6366f1',
+          hover: '#4f46e5',
+          muted: '#eef2ff',
         },
-      },
-      animation: {
-        'spin-slow': 'spin 2s linear infinite',
-        'pulse-soft': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
     },
   },

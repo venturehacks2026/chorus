@@ -1,0 +1,28 @@
+{
+  "name": "chorus-api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.40.0",
+    "@fastify/cors": "^10.0.2",
+    "@supabase/supabase-js": "^2.49.4",
+    "chorus-shared": "workspace:*",
+    "fastify": "^5.3.2",
+    "fastify-plugin": "^5.0.1",
+    "node-vault": "^0.10.2",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  }
+}

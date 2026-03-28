@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-canvas-bg text-white font-sans antialiased;
+  }
+
+  :root {
+    --xy-background-color: #0f0f13;
+    --xy-edge-stroke: #3a3a4a;
+    --xy-edge-stroke-selected: #6366f1;
+    --xy-minimap-background-color: #1a1a24;
+    --xy-controls-button-background-color: #1a1a24;
+    --xy-controls-button-background-color-hover: #2a2a3a;
+    --xy-controls-button-color: #e2e8f0;
+    --xy-controls-button-border-color: #2a2a3a;
+  }
+}

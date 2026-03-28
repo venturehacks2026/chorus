@@ -57,7 +57,7 @@ export default function AgentConfigPanel() {
     <div className="w-72 border-l border-border bg-bg-subtle flex flex-col">
       <div className="flex items-center justify-between px-4 py-3.5 border-b border-border">
         <span className="text-sm font-medium">Agent config</span>
-        <button onClick={save} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-accent hover:bg-accent-hover rounded-lg text-xs text-white font-medium transition-colors">
+        <button onClick={save} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-accent hover:bg-accent-hover rounded-md text-xs text-white font-medium transition-colors">
           <Save className="w-3 h-3" />Save
         </button>
       </div>
@@ -69,7 +69,7 @@ export default function AgentConfigPanel() {
             <input
               value={(form[field] as string) ?? ''}
               onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
-              className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
+              className="w-full bg-bg border border-border rounded-md px-3 py-2 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
             />
           </div>
         ))}
@@ -79,7 +79,7 @@ export default function AgentConfigPanel() {
           <select
             value={form.model ?? 'claude-opus-4-5'}
             onChange={e => setForm(f => ({ ...f, model: e.target.value }))}
-            className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-accent/50"
+            className="w-full bg-bg border border-border rounded-md px-3 py-2 text-sm text-text focus:outline-none focus:border-accent/50"
           >
             {MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
           </select>
@@ -91,7 +91,7 @@ export default function AgentConfigPanel() {
             value={form.system_prompt ?? ''}
             onChange={e => setForm(f => ({ ...f, system_prompt: e.target.value }))}
             rows={6}
-            className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 resize-none transition-all"
+            className="w-full bg-bg border border-border rounded-md px-3 py-2 text-sm text-text focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 resize-none transition-all"
           />
         </div>
 
@@ -99,7 +99,7 @@ export default function AgentConfigPanel() {
           <label className="block text-xs text-text-subtle mb-2">Tools</label>
           {(form.tools ?? []).map(t => (
             <div key={t.id} className="flex items-center gap-2 mb-1.5">
-              <span className="flex-1 text-xs bg-bg border border-border px-2.5 py-1.5 rounded-lg text-text-muted font-mono truncate">{t.connector_id}</span>
+              <span className="flex-1 text-xs bg-bg border border-border px-2.5 py-1.5 rounded-md text-text-muted font-mono truncate">{t.connector_id}</span>
               <button onClick={() => removeTool(t.id)} className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-red-500/10 text-text-subtle hover:text-red-400 transition-colors flex-shrink-0">
                 <Trash2 className="w-3 h-3" />
               </button>
@@ -107,7 +107,7 @@ export default function AgentConfigPanel() {
           ))}
           {unusedConnectors.length > 0 && (
             <select value="" onChange={e => e.target.value && addTool(e.target.value)}
-              className="w-full mt-1 bg-bg border border-dashed border-border rounded-lg px-3 py-2 text-xs text-text-subtle focus:outline-none">
+              className="w-full mt-1 bg-bg border border-dashed border-border rounded-md px-3 py-2 text-xs text-text-subtle focus:outline-none">
               <option value="">+ Add tool</option>
               {unusedConnectors.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}
             </select>

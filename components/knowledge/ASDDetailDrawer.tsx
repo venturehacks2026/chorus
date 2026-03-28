@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { X, Loader2, ArrowRight } from 'lucide-react';
-import type { ASDDetail, Clarification, NodeType, EdgeType, ASDStatus } from '@/lib/knowledge-types';
+import { X, Loader2, ArrowRight, History } from 'lucide-react';
+import type { ASDDetail, ASDVersion, ASDVersionListItem, Clarification, NodeType, EdgeType, ASDStatus } from '@/lib/knowledge-types';
 import ClarificationItem from './ClarificationItem';
 import ContractReviewPanel from './ContractReviewPanel';
 import { cn } from '@/lib/cn';
@@ -39,6 +40,7 @@ interface Props {
 
 export default function ASDDetailDrawer({ asdId, onClose }: Props) {
   const qc = useQueryClient();
+  const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
 
   const { data: asd, isLoading } = useQuery<ASDDetail>({
     queryKey: ['asd-detail', asdId],
@@ -47,6 +49,25 @@ export default function ASDDetailDrawer({ asdId, onClose }: Props) {
       return res.json();
     },
     enabled: !!asdId,
+  });
+
+  const { data: versions = [] } = useQuery<ASDVersionListItem[]>({
+    queryKey: ['asd-versions', asdId],
+    queryFn: async () => {
+      const res = await fetch(`/api/knowledge/asds/${asdId}/versions`);
+      const json = await res.json();
+      return Array.isArray(json) ? json : [];
+    },
+    enabled: !!asdId,
+  });
+
+  const { data: versionDetail, isLoading: versionLoading } = useQuery<ASDVersion>({
+    queryKey: ['asd-version-detail', asdId, selectedVersion],
+    queryFn: async () => {
+      const res = await fetch(`/api/knowledge/asds/${asdId}/versions/${selectedVersion}`);
+      return res.json();
+    },
+    enabled: !!asdId && selectedVersion !== null,
   });
 
   const { data: clarifications = [] } = useQuery<Clarification[]>({
@@ -73,9 +94,11 @@ export default function ASDDetailDrawer({ asdId, onClose }: Props) {
     },
   });
 
-  const version = asd?.latest_version;
-  const nodes = version?.nodes ?? [];
-  const edges = version?.edges ?? [];
+  // Use selected version data if viewing an older version, otherwise latest
+  const isViewingOldVersion = selectedVersion !== null && selectedVersion !== asd?.current_version;
+  const activeVersion = isViewingOldVersion ? versionDetail : asd?.latest_version;
+  const nodes = activeVersion?.nodes ?? [];
+  const edges = activeVersion?.edges ?? [];
   const coverage = asd?.automation_coverage_score ?? 0;
   const pct = Math.round(coverage * 100);
 
@@ -139,6 +162,58 @@ export default function ASDDetailDrawer({ asdId, onClose }: Props) {
                   />
                 </div>
               </div>
+
+              {/* version history */}
+              {versions.length > 1 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">
+                    <History className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+                    Versions <span className="font-normal">({versions.length})</span>
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {versions.map(v => {
+                      const isCurrent = v.version === asd?.current_version;
+                      const isSelected = selectedVersion === v.version || (selectedVersion === null && isCurrent);
+                      return (
+                        <button
+                          key={v.id}
+                          onClick={() => setSelectedVersion(isCurrent ? null : v.version)}
+                          className={cn(
+                            'text-[10px] font-medium px-2 py-1 rounded-md transition-colors',
+                            isSelected
+                              ? 'bg-violet-600 text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
+                          )}
+                        >
+                          v{v.version}
+                          {isCurrent && <span className="ml-1 opacity-70">(current)</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* old version banner */}
+              {isViewingOldVersion && (
+                <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <span className="text-xs text-amber-700">
+                    Viewing version {selectedVersion}
+                  </span>
+                  <button
+                    onClick={() => setSelectedVersion(null)}
+                    className="text-[10px] font-medium text-amber-700 hover:text-amber-900 underline"
+                  >
+                    Back to current
+                  </button>
+                </div>
+              )}
+
+              {versionLoading && isViewingOldVersion && (
+                <div className="flex items-center justify-center h-20">
+                  <Loader2 className="w-4 h-4 text-gray-300 animate-spin" />
+                </div>
+              )}
 
               {/* nodes */}
               {nodes.length > 0 && (

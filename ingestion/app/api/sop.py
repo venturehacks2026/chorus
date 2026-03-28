@@ -155,6 +155,16 @@ async def get_sop(sop_id: str):
     return sop
 
 
+@router.delete("/{sop_id}")
+async def delete_sop(sop_id: str):
+    db = get_supabase()
+    result = db.table("sop_documents").select("id").eq("id", sop_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="SOP not found")
+    db.table("sop_documents").delete().eq("id", sop_id).execute()
+    return {"deleted": True, "sop_id": sop_id}
+
+
 @router.get("")
 async def list_sops():
     db = get_supabase()

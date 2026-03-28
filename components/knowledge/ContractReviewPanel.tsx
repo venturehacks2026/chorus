@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Shield, ShieldAlert, ShieldCheck, ShieldX,
-  AlertTriangle, CheckCircle2, Eye,
+  Shield, ShieldAlert, ShieldCheck,
+  AlertTriangle, Pencil,
   ChevronDown, ChevronRight, Loader2, Play,
   XCircle, Archive,
 } from 'lucide-react';
@@ -74,6 +74,19 @@ export default function ContractReviewPanel({ asdId }: Props) {
       fetch(`/api/knowledge/contracts/${contractId}/activate`, { method: 'POST' }).then(r => r.json()),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['contracts', asdId] }),
   });
+
+  const saveContract = async (contractId: string, dslYaml: string) => {
+    const res = await fetch(`/api/knowledge/contracts/${contractId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dsl_yaml: dslYaml }),
+    });
+    const result = await res.json();
+    if (result.valid) {
+      qc.invalidateQueries({ queryKey: ['contracts', asdId] });
+    }
+    return result as { valid: boolean; validation_errors?: { description: string }[] };
+  };
 
   const dismiss = useMutation({
     mutationFn: ({ contractId, reason }: { contractId: string; reason: string }) =>
@@ -173,6 +186,7 @@ export default function ContractReviewPanel({ asdId }: Props) {
               contract={c}
               onActivate={() => activate.mutate(c.id)}
               onDismiss={(reason) => dismiss.mutate({ contractId: c.id, reason })}
+              onSave={(dslYaml) => saveContract(c.id, dslYaml)}
               isActivating={activate.isPending}
             />
           ))}
@@ -208,21 +222,56 @@ function ContractCard({
   contract,
   onActivate,
   onDismiss,
+  onSave,
   isActivating,
 }: {
   contract: DerivedContract;
   onActivate: () => void;
   onDismiss: (reason: string) => void;
+  onSave: (dslYaml: string) => Promise<{ valid: boolean; validation_errors?: { description: string }[] }>;
   isActivating: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [dismissReason, setDismissReason] = useState('');
   const [showDismiss, setShowDismiss] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editYaml, setEditYaml] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const sev = contract.severity ?? 'medium';
   const sevStyle = SEVERITY_STYLE[sev];
-  const SevIcon = sevStyle.icon;
   const violationAction = (contract.on_violation as Record<string, string>)?.action ?? '—';
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditYaml(contract.dsl_yaml ?? '');
+    setValidationErrors([]);
+    setIsEditing(true);
+    if (!expanded) setExpanded(true);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditYaml('');
+    setValidationErrors([]);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setValidationErrors([]);
+    try {
+      const result = await onSave(editYaml);
+      if (result.valid) {
+        setIsEditing(false);
+        setEditYaml('');
+      } else if (result.validation_errors?.length) {
+        setValidationErrors(result.validation_errors.map(e => e.description));
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -274,12 +323,62 @@ function ContractCard({
             </div>
           )}
 
+          {/* YAML DSL — view or edit */}
           {contract.dsl_yaml && (
             <div>
-              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-1">YAML DSL</p>
-              <pre className="text-[10px] text-gray-600 bg-gray-50 border border-gray-100 rounded-md p-2 overflow-x-auto max-h-48 leading-relaxed">
-                {contract.dsl_yaml}
-              </pre>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">YAML DSL</p>
+                {contract.status === 'draft' && !isEditing && (
+                  <button
+                    onClick={handleEdit}
+                    className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-violet-600 transition-colors"
+                  >
+                    <Pencil className="w-2.5 h-2.5" />
+                    Edit
+                  </button>
+                )}
+              </div>
+              {isEditing ? (
+                <div className="space-y-2" onClick={e => e.stopPropagation()}>
+                  <textarea
+                    value={editYaml}
+                    onChange={e => setEditYaml(e.target.value)}
+                    className="w-full text-[10px] font-mono text-gray-600 bg-white border border-violet-200 rounded-md p-2 leading-relaxed focus:outline-none focus:ring-1 focus:ring-violet-500/30 resize-y min-h-[8rem] max-h-[20rem]"
+                    rows={Math.min(editYaml.split('\n').length + 2, 20)}
+                  />
+                  {validationErrors.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-md px-2.5 py-2 space-y-1">
+                      {validationErrors.map((err, i) => (
+                        <p key={i} className="text-[10px] text-red-600 flex items-start gap-1.5">
+                          <XCircle className="w-3 h-3 shrink-0 mt-0.5" />
+                          {err}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleSave}
+                      disabled={isSaving || editYaml === contract.dsl_yaml}
+                      className="flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-md bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:opacity-50"
+                    >
+                      {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancel}
+                      disabled={isSaving}
+                      className="text-[11px] font-medium px-2.5 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <pre className="text-[10px] text-gray-600 bg-gray-50 border border-gray-100 rounded-md p-2 overflow-x-auto max-h-48 leading-relaxed">
+                  {contract.dsl_yaml}
+                </pre>
+              )}
             </div>
           )}
 

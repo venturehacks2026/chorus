@@ -22,8 +22,18 @@ export interface SOPListItem {
 export interface SOPDetail extends SOPListItem {
   source_uri: string | null;
   content_hash: string;
+  raw_text: string;
   chunk_count: number;
   metadata?: Record<string, unknown>;
+}
+
+export interface ASDVersionListItem {
+  id: string;
+  asd_id: string;
+  version: number;
+  sop_content_hash: string;
+  compiled_by: string | null;
+  created_at: string;
 }
 
 // ASD

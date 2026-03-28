@@ -8,12 +8,16 @@ import SOPTable from './SOPTable';
 import ASDCard from './ASDCard';
 import ASDDetailDrawer from './ASDDetailDrawer';
 import UploadSOPModal from './UploadSOPModal';
+import SOPViewerModal from './SOPViewerModal';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 
 export default function KnowledgeBasePage() {
   const qc = useQueryClient();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [selectedAsdId, setSelectedAsdId] = useState<string | null>(null);
   const [compilingSopIds, setCompilingSopIds] = useState<Set<string>>(new Set());
+  const [viewingSopId, setViewingSopId] = useState<string | null>(null);
+  const [deletingSopId, setDeletingSopId] = useState<string | null>(null);
 
   // ── Data fetching ──
   const { data: sops = [], isLoading: sopsLoading } = useQuery<SOPListItem[]>({
@@ -81,6 +85,16 @@ export default function KnowledgeBasePage() {
     },
   });
 
+  const deleteSop = useMutation({
+    mutationFn: (sopId: string) =>
+      fetch(`/api/knowledge/sops/${sopId}`, { method: 'DELETE' }).then(r => r.json()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['sops'] });
+      qc.invalidateQueries({ queryKey: ['asds'] });
+      setDeletingSopId(null);
+    },
+  });
+
   const isUploading = uploadText.isPending || uploadFile.isPending;
 
   return (
@@ -120,6 +134,8 @@ export default function KnowledgeBasePage() {
                   asds={asds}
                   compilingSopIds={compilingSopIds}
                   onCompile={(sopId) => compile.mutate(sopId)}
+                  onViewSOP={setViewingSopId}
+                  onDelete={setDeletingSopId}
                 />
               )}
             </section>
@@ -156,6 +172,17 @@ export default function KnowledgeBasePage() {
         onSubmitFile={(formData) => uploadFile.mutate(formData)}
         isPending={isUploading}
       />
+
+      <SOPViewerModal sopId={viewingSopId} onClose={() => setViewingSopId(null)} />
+
+      {deletingSopId && (
+        <ConfirmDeleteModal
+          sopTitle={sops.find(s => s.id === deletingSopId)?.title ?? 'this SOP'}
+          onConfirm={() => deleteSop.mutate(deletingSopId)}
+          onCancel={() => setDeletingSopId(null)}
+          isPending={deleteSop.isPending}
+        />
+      )}
 
       {selectedAsdId && (
         <ASDDetailDrawer asdId={selectedAsdId} onClose={() => setSelectedAsdId(null)} />

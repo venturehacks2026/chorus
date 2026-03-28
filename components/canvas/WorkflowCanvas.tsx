@@ -22,7 +22,6 @@ import { useWorkflowStore } from '@/stores/workflowStore';
 import { useUIStore } from '@/stores/uiStore';
 import { FileText } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { cn } from '@/lib/cn';
 
 function FitViewOnChange() {
   const { fitView } = useReactFlow();

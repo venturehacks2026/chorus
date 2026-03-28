@@ -53,6 +53,7 @@ export default function KnowledgeBasePage() {
       }).then(r => r.json()),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sops'] });
+      qc.invalidateQueries({ queryKey: ['sop-documents'] });
       setUploadOpen(false);
     },
   });
@@ -65,6 +66,7 @@ export default function KnowledgeBasePage() {
       }).then(r => r.json()),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sops'] });
+      qc.invalidateQueries({ queryKey: ['sop-documents'] });
       setUploadOpen(false);
     },
   });
@@ -93,6 +95,7 @@ export default function KnowledgeBasePage() {
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['sops'] });
+      qc.invalidateQueries({ queryKey: ['sop-documents'] });
       qc.invalidateQueries({ queryKey: ['asds'] });
       setDeletingSopId(null);
     },

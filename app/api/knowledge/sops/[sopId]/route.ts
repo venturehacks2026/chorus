@@ -1,11 +1,22 @@
-import { proxyGet, proxyDelete } from '@/lib/ingestion-proxy';
+import { NextResponse } from 'next/server';
+import { createServerSupabase } from '@/lib/supabase-server';
+
+export const runtime = 'nodejs';
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ sopId: string }> },
 ) {
   const { sopId } = await params;
-  return proxyGet(`/api/v1/sops/${sopId}`);
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase
+    .from('sop_documents')
+    .select('*')
+    .eq('id', sopId)
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 404 });
+  return NextResponse.json(data);
 }
 
 export async function DELETE(
@@ -13,5 +24,12 @@ export async function DELETE(
   { params }: { params: Promise<{ sopId: string }> },
 ) {
   const { sopId } = await params;
-  return proxyDelete(`/api/v1/sops/${sopId}`);
+  const supabase = createServerSupabase();
+  const { error } = await supabase
+    .from('sop_documents')
+    .delete()
+    .eq('id', sopId);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ success: true });
 }
